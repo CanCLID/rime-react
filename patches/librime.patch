@@ -1,0 +1,36 @@
+diff --git a/include/darts.h b/include/darts.h
+index 18bf988b..4b9bb5d2 100644
+--- a/include/darts.h
++++ b/include/darts.h
+@@ -16,7 +16,7 @@
+ #define DARTS_LINE_TO_STR(line) DARTS_INT_TO_STR(line)
+ #define DARTS_LINE_STR DARTS_LINE_TO_STR(__LINE__)
+ #define DARTS_THROW(msg) throw Darts::Details::Exception( \
+-  __FILE__ ":" DARTS_LINE_STR ": exception: " msg)
++  __FILE_NAME__ ":" DARTS_LINE_STR ": exception: " msg)
+ 
+ namespace Darts {
+ 
+diff --git a/tools/CMakeLists.txt b/tools/CMakeLists.txt
+index 090a0fc0..a24cd51f 100644
+--- a/tools/CMakeLists.txt
++++ b/tools/CMakeLists.txt
+@@ -52,18 +52,3 @@ if(NOT WIN32 OR NOT BUILD_SHARED_LIBS)
+ 
+   install(TARGETS rime_table_decompiler DESTINATION ${BIN_INSTALL_DIR})
+ endif()
+-
+-file(COPY ${PROJECT_SOURCE_DIR}/data/minimal/default.yaml
+-     DESTINATION ${EXECUTABLE_OUTPUT_PATH})
+-file(COPY ${PROJECT_SOURCE_DIR}/data/minimal/symbols.yaml
+-     DESTINATION ${EXECUTABLE_OUTPUT_PATH})
+-file(COPY ${PROJECT_SOURCE_DIR}/data/minimal/essay.txt
+-     DESTINATION ${EXECUTABLE_OUTPUT_PATH})
+-file(COPY ${PROJECT_SOURCE_DIR}/data/minimal/luna_pinyin.dict.yaml
+-     DESTINATION ${EXECUTABLE_OUTPUT_PATH})
+-file(COPY ${PROJECT_SOURCE_DIR}/data/minimal/luna_pinyin.schema.yaml
+-     DESTINATION ${EXECUTABLE_OUTPUT_PATH})
+-file(COPY ${PROJECT_SOURCE_DIR}/data/minimal/cangjie5.dict.yaml
+-     DESTINATION ${EXECUTABLE_OUTPUT_PATH})
+-file(COPY ${PROJECT_SOURCE_DIR}/data/minimal/cangjie5.schema.yaml
+-     DESTINATION ${EXECUTABLE_OUTPUT_PATH})

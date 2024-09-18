@@ -1,0 +1,211 @@
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+}
+
+:host {
+    -moz-text-size-adjust: none;
+    -webkit-text-size-adjust: none;
+    text-size-adjust: none;
+    font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Ubuntu", "Helvetica Neue", "Noto Sans", "Liberation Sans", "Arial", "Microsoft JhengHei", "Microsoft JhengHei UI", "Noto Sans HK", "Noto Sans CJK HK", "sans-serif", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    line-height: 1.41421356;
+    -webkit-font-smoothing: antialiased;
+    font-size: clamp(12px, 0.5vw + 9.6px, 16px);
+    z-index: 2147483647;
+    position: fixed;
+    transform: translateX(0);
+    user-select: none;
+    transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition-property: color, background-color, opacity;
+
+    color-scheme: light;
+    --primary: #0a82fa; /* highlighted candidate background */
+    --primary-content: #f8fbff; /* highlighted candidate */
+    --primary-content-200: #e5f0ff; /* highlighted label */
+    --primary-content-300: #d4e6ff; /* highlighted pronunciation */
+    --primary-content-400: #cae1ff; /* highlighted definition */
+    --primary-content-500: #87c3ff; /* part of speech border */
+    --secondary: #d4ebff; /* footer background */
+    --secondary-content: #0659a7; /* footer */
+    --accent: #c7e3ff; /* input buffer background */
+    --accent-content: #05417d; /* input buffer */
+    --neutral: #e5ebf1; /* tooltip background */
+    --neutral-content: #214361; /* tooltip */
+    --base-100: #ffffff; /* body background */
+    --base-200: #f9fafb; /* candidate panel background */
+    --base-300: #eceef1; /* toggle buttons background */
+    --base-400: #dee1e3; /* candidate panel border */
+    --base-500: #b5b7b9; /* disabled page nav buttons */
+    --base-content: #001635; /* body */
+    --base-content-200: #4b5869; /* label */
+    --base-content-300: #435975; /* pronunciation */
+    --base-content-400: #2f5278; /* definition */
+}
+
+@media (prefers-color-scheme: dark) {
+    :host {
+        color-scheme: dark;
+        --primary: #0465c6; /* highlighted candidate background */
+        --primary-content: #f8fbff; /* highlighted candidate */
+        --primary-content-200: #e5f0ff; /* highlighted label */
+        --primary-content-300: #d4e6ff; /* highlighted pronunciation */
+        --primary-content-400: #cae1ff; /* highlighted definition */
+        --primary-content-500: #458dd5; /* part of speech border */
+        --secondary: #103f6a; /* footer background */
+        --secondary-content: #d3e0ec; /* footer */
+        --accent: #104b8a; /* input buffer background */
+        --accent-content: #ddecff; /* input buffer */
+        --neutral: #26323e; /* tooltip background */
+        --neutral-content: #c5cfd3; /* tooltip */
+        --base-100: #0b121f; /* body background */
+        --base-200: #1c232a; /* candidate panel background */
+        --base-300: #343a44; /* toggle buttons background */
+        --base-400: #464d57; /* candidate panel border */
+        --base-500: #747a81; /* disabled page nav buttons */
+        --base-content: #ffffff; /* body */
+        --base-content-200: #d6e0eb; /* label */
+        --base-content-300: #cfdbe8; /* pronunciation */
+        --base-content-400: #c5d4e4; /* definition */
+    }
+}
+
+button {
+    font: inherit;
+    appearance: none;
+    background: none;
+    border: none;
+}
+
+#candidate-panel {
+    display: flex;
+    flex-direction: column;
+    box-shadow: 2px 8px 10px -4px rgba(0, 0, 0, 0.2);
+    border: 0.1875rem solid var(--base-400);
+    background-color: var(--base-200);
+    border-radius: 0.5625rem;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: 1.125rem;
+    min-width: 8rem;
+}
+
+#input-buffer-row {
+    display: flex;
+    align-items: stretch;
+}
+
+#input-buffer {
+    flex: 1;
+    font-size: 1.25rem;
+}
+
+#input-buffer-before, #input-buffer-after {
+    display: inline-block;
+    margin: 0.25rem;
+}
+
+#input-buffer-active {
+    display: inline-block;
+    padding: 0.25rem;
+    border-radius: 0.375rem;
+    background-color: var(--accent);
+    color: var(--accent-content);
+}
+
+#page-nav {
+    display: contents;
+}
+
+#page-nav button {
+    background-color: transparent;
+    color: var(--primary);
+    font-size: 2.25rem;
+    line-height: 0;
+    padding-inline: 0.625rem;
+    cursor: pointer;
+}
+
+#page-nav button:first-child,
+.candidate-cell:first-child {
+    border-top-left-radius: 0.375rem;
+    border-bottom-left-radius: 0.375rem;
+}
+
+#page-nav button:last-child,
+.candidate-cell:last-child {
+    border-top-right-radius: 0.375rem;
+    border-bottom-right-radius: 0.375rem;
+}
+
+#page-nav button span {
+    position: relative;
+    bottom: 0.25rem;
+}
+
+#page-nav button:enabled:hover {
+    background-color: var(--base-400);
+}
+
+#page-nav button:disabled {
+    color: var(--base-500);
+    cursor: not-allowed;
+}
+
+#candidate-list li {
+    display: table-row;
+}
+
+.candidate {
+    display: contents;
+    cursor: pointer;
+}
+
+.candidate-cell {
+    display: table-cell;
+    text-align: left;
+    vertical-align: top;
+    min-width: 0.375rem;
+    padding: 0.25rem;
+}
+
+.candidate-label {
+    color: var(--base-content-300);
+}
+
+.candidate-text {
+    color: var(--base-content-200);
+}
+
+.candidate-comment {
+    padding-inline-end: 1rem;
+    width: 100%;
+    color: var(--base-content-400);
+}
+
+#candidate-list:not(:hover):not(:focus) .highlighted .candidate-cell,
+.candidate:hover .candidate-cell,
+.candidate:focus .candidate-cell {
+    background-color: var(--primary);
+}
+
+#candidate-list:not(:hover):not(:focus) .highlighted .candidate-label,
+.candidate:hover .candidate-label,
+.candidate:focus .candidate-label {
+    color: var(--primary-content-300);
+}
+
+#candidate-list:not(:hover):not(:focus) .highlighted .candidate-text,
+.candidate:hover .candidate-text,
+.candidate:focus .candidate-text {
+    color: var(--primary-content-200);
+}
+
+#candidate-list:not(:hover):not(:focus) .highlighted .candidate-comment,
+.candidate:hover .candidate-comment,
+.candidate:focus .candidate-comment {
+    color: var(--primary-content-400);
+}

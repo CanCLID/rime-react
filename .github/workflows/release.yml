@@ -1,0 +1,29 @@
+name: Release
+on:
+    release:
+        types: [created]
+jobs:
+    build:
+        uses: ./.github/workflows/build.yml
+    release:
+        needs: build
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Latest Commit
+              uses: actions/checkout@v4
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  registry-url: https://registry.npmjs.org
+            - name: Download Artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: rime-react
+            - name: Release
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+              run: |
+                  tar -xvf rime-react.tar
+                  mv rime-react dist
+                  npm publish
