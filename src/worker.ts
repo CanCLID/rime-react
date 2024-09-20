@@ -31,7 +31,7 @@ interface PredefinedModule {
 	print(message: string): void;
 	printErr(message: string): void;
 	onRuntimeInitialized(): void;
-	locateFile(path: string, prefix: string): string;
+	locateFile(path: string, prefix: string): string | URL & { startsWith: string["startsWith"] };
 }
 
 declare const globalThis: {
@@ -118,15 +118,17 @@ function normalizeURL(...parts: string[]) {
 let userDirMounted = false;
 let initialized = false;
 const actions: Actions = {
-	initialize(pathToRimeJS, pathToRimeWASM) {
+	initialize(baseURL, pathToRimeJS, pathToRimeWASM) {
+		const URLToRimeJS = new URL(pathToRimeJS, baseURL);
+		const URLToRimeWASM = Object.assign(new URL(pathToRimeWASM, baseURL), { startsWith: () => false });
 		return new Promise<void>(resolve => {
 			globalThis.Module = {
 				print: log("info"),
 				printErr: log("error"),
 				onRuntimeInitialized: resolve,
-				locateFile: () => pathToRimeWASM,
+				locateFile: () => URLToRimeWASM,
 			};
-			importScripts(pathToRimeJS);
+			importScripts(URLToRimeJS);
 		});
 	},
 	async setSchemaFiles(prefix, schemaFiles) {

@@ -17,9 +17,9 @@ export default function RimeReact({
 	children,
 }: {
 	/** @default "rime.js" */
-	pathToRimeJS?: string;
+	pathToRimeJS?: string | URL;
 	/** @default "rime.wasm" */
-	pathToRimeWASM?: string;
+	pathToRimeWASM?: string | URL;
 	schemaFilesFetchPrefix: string;
 	schemaFilesToSHA256: Record<string, string>;
 	/** @default "input[type='text'], input[type='search'], textarea, [contenteditable]" */

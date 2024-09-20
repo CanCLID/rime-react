@@ -9,7 +9,7 @@ export interface RimeAPI {
 }
 
 export interface Actions {
-	initialize(pathToRimeJS: string, pathToRimeWASM: string): Promise<void>;
+	initialize(baseURL: string | URL, pathToRimeJS: string | URL, pathToRimeWASM: string | URL): Promise<void>;
 	setSchemaFiles(prefix: string, schemaFiles: Record<string, string>): Promise<boolean>;
 	processKey(input: string): Promise<RimeResult>;
 	selectCandidate(index: number): Promise<RimeResult>;

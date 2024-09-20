@@ -35,7 +35,7 @@ declare const workerSource: string;
 
 let worker: Worker | undefined;
 
-export async function initialize(pathToRimeJS: string, pathToRimeWASM: string) {
+export async function initialize(pathToRimeJS: string | URL, pathToRimeWASM: string | URL) {
 	if (worker) return;
 	// Don’t use data URI as CSP may be set to reject it
 	worker = new Worker(URL.createObjectURL(new Blob([workerSource.replace(/enableLogging/g, JSON.stringify(enableLogging))], { type: "text/javascript" })));
@@ -67,7 +67,14 @@ export async function initialize(pathToRimeJS: string, pathToRimeWASM: string) {
 			}
 		}
 	});
-	return actions.initialize(pathToRimeJS, pathToRimeWASM);
+	let baseURL: string;
+	try {
+		baseURL = import.meta.url;
+	}
+	catch {
+		baseURL = (document.currentScript as HTMLScriptElement | null)?.src || location.href;
+	}
+	return actions.initialize(baseURL, pathToRimeJS, pathToRimeWASM);
 }
 
 function postMessage(message: Message) {
