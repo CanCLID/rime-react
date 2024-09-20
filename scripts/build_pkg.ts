@@ -27,7 +27,6 @@ if (!buildWorkerSuccess) {
 	throw new AggregateError(buildWorkerLogs, "Failed to build 'worker.ts'");
 }
 
-// https://github.com/oven-sh/bun/issues/3768
 const { outputs: [index], success: buildIndexSuccess, logs: buildIndexLogs } = await Bun.build({
 	entrypoints: ["./src/index.ts"],
 	external: ["react", "react-dom"],
@@ -47,8 +46,14 @@ if (!buildIndexSuccess) {
 await Bun.write(
 	"./dist/index.js",
 	(await index.text())
+		// https://github.com/oven-sh/bun/issues/3768
 		.replaceAll("react/jsx-dev-runtime", "react/jsx-runtime")
-		.replaceAll("jsxDEV", "jsx"),
+		.replaceAll("jsxDEV", "jsx")
+		// This is needed such that the module doesn’t get nested (`{ default: { default: ReactShadowRoot }}`)
+		.replace(
+			"import_react_shadow_root = __toESM(require_lib(), 1)",
+			"import_react_shadow_root = __toESM(require_lib(), 0)",
+		),
 );
 
 await $`bunx dts-bundle-generator --no-check -o dist/index.d.ts src/index.ts`;

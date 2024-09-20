@@ -11,7 +11,7 @@ type TypeToString<T> = T extends number ? "number"
 
 type ArgsToString<T> = { [P in keyof T]: TypeToString<T[P]> };
 
-interface Module {
+declare const Module: {
 	ccall<Method extends keyof RimeAPI>(
 		ident: Method,
 		returnType: TypeToString<ReturnType<RimeAPI[Method]>>,
@@ -19,10 +19,13 @@ interface Module {
 		args: Parameters<RimeAPI[Method]>,
 		opts?: Emscripten.CCallOpts,
 	): ReturnType<RimeAPI[Method]>;
-	FS: typeof FS;
-}
-
-declare const Module: Module;
+	FS: typeof FS & {
+		mkdirTree(path: string, mode?: number): void;
+	};
+};
+declare const PATH: {
+	normalize(path: string): string;
+};
 
 interface PredefinedModule {
 	print(message: string): void;
@@ -132,10 +135,13 @@ const actions: Actions = {
 			pendingCacheDB = undefined;
 		}
 		if (cacheDB) {
-			await Promise.all(
+			const removeResults = await Promise.allSettled(
 				(await cacheDB.getAll(DB_HASH)).flatMap(({ file, hash }) => {
 					if (schemaFiles[file] !== hash) {
-						Module.FS.unlink(`${RIME_SHARED_DIR}/${file}`);
+						const filePath = PATH.normalize(`${RIME_SHARED_DIR}/${file}`);
+						if (Module.FS.analyzePath(filePath).exists) {
+							Module.FS.unlink(filePath);
+						}
 						return [
 							cacheDB!.delete(DB_HASH, file),
 							cacheDB!.delete(DB_CONTENT, file),
@@ -144,30 +150,46 @@ const actions: Actions = {
 					return [];
 				}),
 			);
+			const failedRemovals = removeResults.filter(result => result.status === "rejected");
+			if (failedRemovals.length) {
+				throw new AggregateError(failedRemovals.map(result => result.reason as Error), "Failed to completely remove stale schema files");
+			}
 		}
-		prefix = normalizeURL(prefix);
-		await Promise.all(
+		prefix = normalizeURL(prefix).replace(/\/$/, "");
+		const fetchResults = await Promise.allSettled(
 			Object.entries(schemaFiles).map(async ([file, hash]) => {
-				file = normalizeURL(file);
+				const fetchPath = normalizeURL(prefix, normalizeURL(file).replace(/^\//, ""));
+				file = file.replace(/[?#].*/, ""); // Remove query and fragment if any
+				file = PATH.normalize(file).replace(/^\/|\/$/g, "");
 				const cachedFile = await cacheDB?.get(DB_HASH, file);
+				const savePath = PATH.normalize(`${RIME_SHARED_DIR}/${file}`);
+				let buffer: ArrayBuffer | undefined;
 				if (cachedFile?.hash === hash) {
-					return cacheDB?.get(DB_CONTENT, file);
+					buffer = await cacheDB?.get(DB_CONTENT, file);
+					if (buffer && Module.FS.analyzePath(savePath).exists) {
+						// Saved files with different hashes from those in the database are already deleted above,
+						// So the file here must be the same as the one in the database
+						return buffer;
+					}
 				}
-				const fetchPath = normalizeURL(prefix.replace(/\/$/, ""), file.replace(/^\//, ""));
-				const response = await fetch(fetchPath, { cache: "no-cache" });
-				if (!response.ok) {
-					throw new Error(`Failed to download ${fetchPath}`);
-				}
-				const buffer = await response.arrayBuffer();
-				if (
-					hash !== Array.from(
+				if (!buffer) {
+					const response = await fetch(fetchPath, { cache: "no-cache" });
+					if (!response.ok) {
+						throw new Error(`Failed to download ${fetchPath}`);
+					}
+					buffer = await response.arrayBuffer();
+					const actualHash = Array.from(
 						new Uint8Array(await crypto.subtle.digest("SHA-256", buffer)),
 						byte => byte.toString(16).padStart(2, "0"),
-					).join("")
-				) throw new Error(`Error downloading ${fetchPath}: incorrect hash`);
-				await cacheDB?.put(DB_CONTENT, buffer, file);
-				await cacheDB?.put(DB_HASH, { file, hash }, file);
-				Module.FS.writeFile(`${RIME_SHARED_DIR}/${file}`, new Uint8Array(buffer));
+					).join("");
+					if (hash !== actualHash) {
+						throw new Error(`Error downloading ${fetchPath}: expected SHA-256 hash ${hash}, got ${actualHash}`);
+					}
+					await cacheDB?.put(DB_CONTENT, buffer, file);
+					await cacheDB?.put(DB_HASH, { file, hash }, file);
+				}
+				Module.FS.mkdirTree(savePath.slice(0, savePath.lastIndexOf("/")));
+				Module.FS.writeFile(savePath, new Uint8Array(buffer));
 				return buffer;
 			}),
 		);
@@ -177,9 +199,13 @@ const actions: Actions = {
 			userDirMounted = true;
 		}
 		await syncUserDirectory("read");
-		const success = Module.ccall(initialized ? "deploy" : "init", "boolean", [], []);
+		const success = initialized = Module.ccall(initialized ? "deploy" : "init", "boolean", [], []);
 		await syncUserDirectory("write");
-		return initialized = success;
+		const failedFetches = fetchResults.filter(result => result.status === "rejected");
+		if (failedFetches.length) {
+			throw new AggregateError(failedFetches.map(result => result.reason as Error), "Failed to completely set schema files");
+		}
+		return success;
 	},
 	async processKey(input) {
 		const result = JSON.parse(Module.ccall("process_key", "string", ["string"], [input])) as RimeResult;
