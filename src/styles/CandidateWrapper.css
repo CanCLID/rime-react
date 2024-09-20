@@ -11,7 +11,7 @@
     -moz-text-size-adjust: none;
     -webkit-text-size-adjust: none;
     text-size-adjust: none;
-    font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Ubuntu", "Helvetica Neue", "Noto Sans", "Liberation Sans", "Arial", "Microsoft JhengHei", "Microsoft JhengHei UI", "Noto Sans HK", "Noto Sans CJK HK", "sans-serif", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    font-family: ui-sans-serif, "-apple-system", "BlinkMacSystemFont", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
     line-height: 1.41421356;
     -webkit-font-smoothing: antialiased;
     font-size: clamp(12px, 0.5vw + 9.6px, 16px);
