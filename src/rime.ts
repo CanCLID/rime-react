@@ -27,9 +27,17 @@ const queue: Message[] = [];
 
 const listeners = {} as { [K in keyof Listeners]?: Set<Listeners[K]> };
 
-// Prevent automatic elimination
-// eslint-disable-next-line no-useless-concat
-const enableLogging = typeof process === "object" && process[("env" + "") as "env"].NODE_ENV !== "production";
+let enableLogging = false;
+try {
+	// We have to do this way since `typeof process === "object"` isn’t transformed by bundler like vite.
+	// The concatenation prevents automatic elimination during library bundling and transforms to
+	// `process.env.NODE_ENV` in the output.
+	// eslint-disable-next-line no-useless-concat
+	enableLogging = process[("env" + "") as "env"].NODE_ENV !== "production";
+}
+catch {
+	// The module is running in an environment where `process` is not defined, such as in a browser.
+}
 
 declare const workerSource: string;
 
