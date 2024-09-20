@@ -103,7 +103,7 @@
 		"import/no-absolute-path": "error",
 		"import/no-anonymous-default-export": ["warn", { "allowCallExpression": false }],
 		"import/no-extraneous-dependencies": ["error", {
-			"devDependencies": ["*.config.ts"],
+			"devDependencies": ["scripts/**"],
 			"includeInternal": true,
 			"includeTypes": true
 		}],
