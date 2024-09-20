@@ -22,6 +22,28 @@ export default function useSelection(container: HTMLElement, includeElements: st
 
 	useLayoutEffect(() => {
 		function onSelectionChange() {
+			const focusedElement = document.activeElement;
+			if (container.contains(focusedElement) && (focusedElement instanceof HTMLInputElement || focusedElement instanceof HTMLTextAreaElement) && focusedElement.closest(includeElements)) {
+				const textField = focusedElement;
+				setSelection({
+					textField,
+					updateCaretCoords() {
+						const { top: caretTop, left: caretLeft, height: caretHeight } = getCaretCoordinates(textField, textField.selectionStart!);
+						let { top, left } = textField.getBoundingClientRect();
+						top += caretTop - textField.scrollTop;
+						left += caretLeft - textField.scrollLeft;
+						// This is due to applying `parseInt` on `lineHeight: normal`
+						setCaretPos({ top, bottom: top + (Number.isNaN(caretHeight) ? parseInt(window.getComputedStyle(textField).fontSize) : caretHeight), left });
+					},
+					replace(newText) {
+						const { selectionStart, selectionEnd } = textField;
+						textField.value = textField.value.slice(0, selectionStart!) + newText + textField.value.slice(selectionEnd!);
+						textField.selectionStart = textField.selectionEnd = selectionStart! + newText.length;
+						textField.focus();
+					},
+				});
+				return;
+			}
 			const selection = document.getSelection();
 			const ranges = selection
 				? Array
@@ -53,28 +75,6 @@ export default function useSelection(container: HTMLElement, includeElements: st
 							range.collapse();
 							selection!.addRange(range);
 						}
-					},
-				});
-				return;
-			}
-			const focusedElement = document.activeElement;
-			if (container.contains(focusedElement) && (focusedElement instanceof HTMLInputElement || focusedElement instanceof HTMLTextAreaElement) && focusedElement.closest(includeElements)) {
-				const textField = focusedElement;
-				setSelection({
-					textField,
-					updateCaretCoords() {
-						const { top: caretTop, left: caretLeft, height: caretHeight } = getCaretCoordinates(textField, textField.selectionStart!);
-						let { top, left } = textField.getBoundingClientRect();
-						top += caretTop - textField.scrollTop;
-						left += caretLeft - textField.scrollLeft;
-						// This is due to applying `parseInt` on `lineHeight: normal`
-						setCaretPos({ top, bottom: top + (Number.isNaN(caretHeight) ? parseInt(window.getComputedStyle(textField).fontSize) : caretHeight), left });
-					},
-					replace(newText) {
-						const { selectionStart, selectionEnd } = textField;
-						textField.value = textField.value.slice(0, selectionStart!) + newText + textField.value.slice(selectionEnd!);
-						textField.selectionStart = textField.selectionEnd = selectionStart! + newText.length;
-						textField.focus();
 					},
 				});
 				return;
