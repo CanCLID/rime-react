@@ -1,6 +1,6 @@
 import { openDB } from "idb";
 
-import type { Actions, ListenerArgsMap, Message, RimeResult, RimeAPI, RimeNotification } from "./types";
+import type { Actions, ListenerArgsMap, Message, RimeInputStatus, RimeAPI, RimeEvent, RimeDeployStatus } from "./types";
 import type { DBSchema, IDBPDatabase } from "idb";
 
 type TypeToString<T> = T extends number ? "number"
@@ -35,14 +35,20 @@ interface PredefinedModule {
 }
 
 declare const globalThis: {
-	onRimeNotification<T extends keyof RimeNotification>(type: T, value: RimeNotification[T]): void;
+	onRimeEvent<T extends keyof RimeEvent>(type: T, value: RimeEvent[T]): void;
 	Module: PredefinedModule;
 };
 
-globalThis.onRimeNotification = (type, value) => {
+globalThis.onRimeEvent = async (type, value) => {
 	switch (type) {
 		case "deploy":
-			dispatch("deployStatusChanged", value);
+			dispatch("deployStatusChanged", value as RimeDeployStatus);
+			break;
+		case "input":
+			if ("committed" in (value as RimeInputStatus)) {
+				await syncUserDirectory("write");
+			}
+			dispatch("inputStatusChanged", value as RimeInputStatus);
 			break;
 	}
 };
@@ -210,23 +216,19 @@ const actions: Actions = {
 		return success;
 	},
 	async processKey(input) {
-		const result = JSON.parse(Module.ccall("process_key", "string", ["string"], [input])) as RimeResult;
-		if ("committed" in result) {
-			await syncUserDirectory("write");
-		}
-		return result;
+		return Module.ccall("process_key", "boolean", ["string"], [input]);
 	},
 	async selectCandidate(index) {
-		return JSON.parse(Module.ccall("select_candidate", "string", ["number"], [index])) as RimeResult;
+		return Module.ccall("select_candidate", "boolean", ["number"], [index]);
 	},
 	async deleteCandidate(index) {
-		return JSON.parse(Module.ccall("delete_candidate", "string", ["number"], [index])) as RimeResult;
+		return Module.ccall("delete_candidate", "boolean", ["number"], [index]);
 	},
 	async flipPage(backward) {
-		return JSON.parse(Module.ccall("flip_page", "string", ["boolean"], [backward])) as RimeResult;
+		return Module.ccall("flip_page", "boolean", ["boolean"], [backward]);
 	},
 	async clearInput() {
-		return JSON.parse(Module.ccall("clear_input", "string", [], [])) as RimeResult;
+		Module.ccall("clear_input", null, [], []);
 	},
 	async deploy() {
 		const result = Module.ccall("deploy", "boolean", [], []);

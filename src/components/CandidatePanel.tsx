@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 
 import Candidate from "./Candidate";
@@ -7,7 +7,7 @@ import { ordinalSuffixes, RIME_KEY_MAP } from "../consts";
 import useSelection from "../hooks/useSelection";
 import { isPrintable } from "../utils";
 
-import type { RimeInstance, InputState, RimeResult } from "../types";
+import type { RimeInstance, InputState } from "../types";
 
 export default function CandidatePanel({
 	rimeInstance: Rime,
@@ -22,37 +22,50 @@ export default function CandidatePanel({
 }) {
 	const { caretPos, replaceSelection } = useSelection(container, includeElements);
 	const [inputState, setInputState] = useState<InputState | null>(null);
+	const previousAction = useRef("perform action");
+	const previousKey = useRef<string>();
 
-	const handleRimeResult = useCallback((promise: Promise<RimeResult>, action: string, key?: string) =>
+	useEffect(() =>
+		Rime.subscribe("inputStatusChanged", status =>
+			runAsyncTask(async () => {
+				try {
+					setInputState(prevInputState => {
+						const state = status.isComposing
+							? {
+								inputBuffer: status.inputBuffer,
+								highlightedIndex: status.highlightedIndex,
+								candidates: status.candidates,
+								isPrevDisabled: !status.page,
+								isNextDisabled: status.isLastPage,
+							}
+							: prevInputState;
+						if (status.committed) {
+							replaceSelection?.(status.committed);
+						}
+						else if (!state && previousKey.current && isPrintable(previousKey.current)) {
+							replaceSelection?.(previousKey.current);
+						}
+						return status.isComposing ? state : null;
+					});
+				}
+				catch (error) {
+					throw new Error(`Failed to ${previousAction.current}`, { cause: error });
+				}
+			})), [Rime, runAsyncTask, replaceSelection]);
+
+	const handleRimeResult = useCallback((promise: Promise<boolean> | Promise<void>, action: string, key?: string) =>
 		runAsyncTask(async () => {
 			try {
-				const result = await promise;
-				if (!result.success) {
+				previousAction.current = action;
+				previousKey.current = key;
+				if (await promise === false) {
 					throw new Error("Error occurred in RIME engine");
 				}
-				setInputState(prevInputState => {
-					const state = result.isComposing
-						? {
-							inputBuffer: result.inputBuffer,
-							highlightedIndex: result.highlightedIndex,
-							candidates: result.candidates,
-							isPrevDisabled: !result.page,
-							isNextDisabled: result.isLastPage,
-						}
-						: prevInputState;
-					if (result.committed) {
-						replaceSelection?.(result.committed);
-					}
-					else if (!state && key && isPrintable(key)) {
-						replaceSelection?.(key);
-					}
-					return result.isComposing ? state : null;
-				});
 			}
 			catch (error) {
 				throw new Error(`Failed to ${action}`, { cause: error });
 			}
-		}), [runAsyncTask, replaceSelection]);
+		}), [runAsyncTask]);
 
 	const processKey = useCallback((input: string, key?: string) => handleRimeResult(Rime.processKey(input), `handle keyboard input '${input}'`, key), [handleRimeResult, Rime]);
 	const flipPage = useCallback((backward: boolean) => handleRimeResult(Rime.flipPage(backward), `flip to the ${backward ? "previous" : "next"} candidate page`), [handleRimeResult, Rime]);
