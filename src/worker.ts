@@ -1,6 +1,6 @@
 import { openDB } from "idb";
 
-import type { Actions, ListenerArgsMap, Message, RimeResult, RimeAPI, RimeNotification } from "./types";
+import type { Actions, ListenerArgsMap, Message, RimeResult, RimeAPI, RimeEvent, Schema, SwitchOption, RimeDeployStatus } from "./types";
 import type { DBSchema, IDBPDatabase } from "idb";
 
 type TypeToString<T> = T extends number ? "number"
@@ -44,15 +44,30 @@ interface PredefinedModule {
 }
 
 declare const globalThis: {
-	onRimeNotification<T extends keyof RimeNotification>(type: T, value: RimeNotification[T]): void;
+	onRimeEvent<T extends keyof RimeEvent>(type: T, value: RimeEvent[T]): void;
 	Module: PredefinedModule;
 };
 
-globalThis.onRimeNotification = (type, value) => {
+globalThis.onRimeEvent = (type, value) => {
 	switch (type) {
 		case "deploy":
-			dispatch("deployStatusChanged", value);
+			dispatch("deployStatusChanged", value as RimeDeployStatus);
 			break;
+		case "schema_list":
+			dispatch("schemaListChanged", JSON.parse(value) as Schema[]);
+			break;
+		case "schema":
+			dispatch("schemaChanged", ...value.split("/") as [string, string]);
+			break;
+		case "switches_list":
+			dispatch("switchesListChanged", JSON.parse(value) as SwitchOption[]);
+			break;
+		case "option": {
+			// XXX Fix Me
+			const disabled = value[0] === "!";
+			dispatch("optionChanged", value.slice(+disabled), !disabled);
+			break;
+		}
 	}
 };
 
@@ -226,6 +241,16 @@ const actions: Actions = {
 			throw new AggregateError(failedFetches.map(result => result.reason as Error), "Failed to completely set schema files");
 		}
 		return initialized;
+	},
+	async setSchema(id) {
+		return Module.ccall("set_schema", "boolean", ["string"], [id]);
+	},
+	async setOption(option, value) {
+		Module.ccall("set_option", null, ["string", "number"], [option, value]);
+	},
+	async setPreference(option, value) {
+		Module.ccall("set_preference", null, ["string", "number"], [option, value]);
+		return option === "pageSize" || actions.deploy();
 	},
 	async processKey(input) {
 		const result = JSON.parse(Module.ccall("process_key", "string", ["string"], [input])) as RimeResult;

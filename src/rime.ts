@@ -54,6 +54,7 @@ export async function initialize(pathToRimeJS: string | URL, pathToRimeWASM: str
 			const { name, args } = data;
 			if (name in listeners) {
 				for (const listener of listeners[name]!) {
+					// @ts-expect-error Unactionable
 					listener(...args);
 				}
 			}
@@ -108,6 +109,9 @@ const actions = new Proxy({} as Actions, {
 
 export const {
 	setSchemaFiles,
+	setSchema,
+	setOption,
+	setPreference,
 	processKey,
 	selectCandidate,
 	deleteCandidate,
@@ -117,6 +121,7 @@ export const {
 } = actions;
 
 export function subscribe<K extends keyof Listeners>(type: K, callback: Listeners[K]) {
+	// @ts-expect-error Unactionable
 	(listeners[type] ||= new Set()).add(callback);
 	return () => {
 		if (listeners[type]) {

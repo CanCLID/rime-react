@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 
 import CandidatePanel from "./CandidatePanel";
+import { RimeContext, RimeInstanceContext } from "../contexts";
 import useLoading from "../hooks/useLoading";
 import getRimeInstance from "../instance";
-import RimeContext from "../RimeContext";
 
 import type { RimeInstance } from "../types";
 
@@ -14,6 +14,7 @@ export default function RimeReact({
 	schemaFilesToSHA256,
 	includeElements = "input[type='text'], input[type='search'], textarea, [contenteditable]",
 	onError,
+	additionalStylesForCandidatePanel,
 	children,
 }: {
 	/** @default "rime.js" */
@@ -25,6 +26,7 @@ export default function RimeReact({
 	/** @default "input[type='text'], input[type='search'], textarea, [contenteditable]" */
 	includeElements?: string;
 	onError?(error: unknown): void;
+	additionalStylesForCandidatePanel?: string;
 	children: JSX.Element;
 }) {
 	const [rimeInstance, setRimeInstance] = useState<RimeInstance | null>(null);
@@ -83,12 +85,14 @@ export default function RimeReact({
 			isDeploying,
 			subscribe: rimeInstance?.subscribe || (() => () => void 0), // XXX Fix Me
 		}}>
-		<div ref={container}>{children}</div>
-		{rimeInstance && container.current
-			&& <CandidatePanel
-				rimeInstance={rimeInstance}
-				container={container.current}
-				includeElements={includeElements}
-				runAsyncTask={runAsyncTask} />}
+		{rimeInstance && <RimeInstanceContext.Provider value={rimeInstance}>
+			<div ref={container}>{children}</div>
+			{container.current
+				&& <CandidatePanel
+					container={container.current}
+					includeElements={includeElements}
+					additionalStyles={additionalStylesForCandidatePanel}
+					runAsyncTask={runAsyncTask} />}
+		</RimeInstanceContext.Provider>}
 	</RimeContext.Provider>;
 }

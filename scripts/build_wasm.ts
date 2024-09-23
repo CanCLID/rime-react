@@ -3,6 +3,9 @@ import { $ } from "bun";
 const libPath = "build/sysroot/usr/lib";
 const exportedFunctions = [
 	"_init",
+	"_set_schema",
+	"_set_option",
+	"_set_preference",
 	"_process_key",
 	"_select_candidate",
 	"_delete_candidate",

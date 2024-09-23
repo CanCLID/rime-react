@@ -4,22 +4,25 @@ import { createPortal } from "react-dom";
 import Candidate from "./Candidate";
 import CandidateWrapper from "./CandidateWrapper";
 import { ordinalSuffixes, RIME_KEY_MAP } from "../consts";
+import useRimeInstance from "../hooks/useRimeInstance";
 import useSelection from "../hooks/useSelection";
 import { isPrintable } from "../utils";
 
-import type { RimeInstance, InputState, RimeResult } from "../types";
+import type { InputState, RimeResult } from "../types";
 
 export default function CandidatePanel({
-	rimeInstance: Rime,
 	container,
 	includeElements,
+	additionalStyles,
 	runAsyncTask,
 }: {
-	rimeInstance: RimeInstance;
 	container: HTMLElement;
 	includeElements: string;
+	additionalStyles?: string;
 	runAsyncTask(asyncTask: () => Promise<void>): void;
 }) {
+	const Rime = useRimeInstance();
+
 	const { caretPos, replaceSelection } = useSelection(container, includeElements);
 	const [inputState, setInputState] = useState<InputState | null>(null);
 
@@ -139,7 +142,7 @@ export default function CandidatePanel({
 		}), [Rime, clearInput]);
 
 	return caretPos && inputState && createPortal(
-		<CandidateWrapper caretPos={caretPos}>
+		<CandidateWrapper caretPos={caretPos} additionalStyles={additionalStyles}>
 			<div id="input-buffer-row">
 				<div id="input-buffer">
 					{inputState.inputBuffer.before && <span id="input-buffer-before">{inputState.inputBuffer.before}</span>}
