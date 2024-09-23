@@ -1,4 +1,4 @@
-import type { Actions, ListenerArgsMap, Message, RimeDeployStatus, RimeInputStatus } from "./types";
+import type { Actions, ListenerArgsMap, Message } from "./types";
 
 type ListenerPayload = {
 	[K in keyof ListenerArgsMap]: {
@@ -21,17 +21,13 @@ interface ErrorPayload {
 type Payload = ListenerPayload | SuccessPayload | ErrorPayload;
 
 type Listeners = {
-	deployStatusChanged: (status: RimeDeployStatus) => void;
-	inputStatusChanged: (status: RimeInputStatus) => void;
+	[K in keyof ListenerArgsMap]: (...args: ListenerArgsMap[K]) => void;
 };
 
 let running: Message | null = null;
 const queue: Message[] = [];
 
-const listeners: { [K in keyof Listeners]: Set<Listeners[K]> } = {
-	deployStatusChanged: new Set(),
-	inputStatusChanged: new Set(),
-};
+const listeners = {} as { [K in keyof Listeners]?: Set<Listeners[K]> };
 
 let enableLogging = false;
 try {
@@ -57,14 +53,12 @@ export async function initialize(pathToRimeJS: string | URL, pathToRimeWASM: str
 		if (enableLogging) console.log("receive", data);
 		const { type } = data;
 		if (type === "listener") {
-			if (data.name === "deployStatusChanged") {
-				for (const listener of listeners.deployStatusChanged) {
-					listener(...data.args);
-				}
-			}
-			else if (data.name === "inputStatusChanged") {
-				for (const listener of listeners.inputStatusChanged) {
-					listener(...data.args);
+			const { name, args } = data;
+			const set = listeners[name];
+			if (set) {
+				for (const listener of set) {
+					// @ts-expect-error Unactionable
+					listener(...args);
 				}
 			}
 		}
@@ -118,6 +112,9 @@ const actions = new Proxy({} as Actions, {
 
 export const {
 	setSchemaFiles,
+	setSchema,
+	setOption,
+	setPreference,
 	processKey,
 	selectCandidate,
 	deleteCandidate,
@@ -126,10 +123,8 @@ export const {
 	deploy,
 } = actions;
 
-export function subscribe(type: "deployStatusChanged", callback: Listeners["deployStatusChanged"]): () => void;
-export function subscribe(type: "inputStatusChanged", callback: Listeners["inputStatusChanged"]): () => void;
-export function subscribe(type: keyof Listeners, callback: Listeners[keyof Listeners]) {
-	const set = listeners[type] as Set<Listeners[keyof Listeners]>;
+export function subscribe<K extends keyof Listeners>(type: K, callback: Listeners[K]) {
+	const set = (listeners[type] ||= new Set()) as Set<Listeners[K]>;
 	set.add(callback);
 	return () => {
 		set.delete(callback);

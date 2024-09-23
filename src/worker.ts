@@ -1,6 +1,6 @@
 import { openDB } from "idb";
 
-import type { Actions, ListenerArgsMap, Message, RimeInputStatus, RimeAPI, RimeEvent, RimeDeployStatus } from "./types";
+import type { Actions, ListenerArgsMap, Message, RimeInputStatus, RimeAPI, RimeEvent, Schema, SwitchOption, RimeDeployStatus } from "./types";
 import type { DBSchema, IDBPDatabase } from "idb";
 
 type TypeToString<T> = T extends number ? "number"
@@ -23,6 +23,7 @@ declare const Module: {
 		mkdirTree(path: string, mode?: number): void;
 	};
 };
+
 declare const PATH: {
 	/**
 	 * Removes consecutive slashes, `.` segments and `segment/..` from the path.
@@ -59,6 +60,22 @@ globalThis.onRimeEvent = async (type, value) => {
 			}
 			dispatch("inputStatusChanged", value as RimeInputStatus);
 			break;
+		case "schema_list":
+			dispatch("schemaListChanged", value as Schema[]);
+			break;
+		case "schema":
+			dispatch("schemaChanged", ...(value as string).split("/") as [string, string]);
+			break;
+		case "switches_list":
+			dispatch("switchesListChanged", value as SwitchOption[]);
+			break;
+		case "option": {
+			// XXX Fix Me
+			const option = value as string;
+			const disabled = option[0] === "!";
+			dispatch("optionChanged", option.slice(+disabled), !disabled);
+			break;
+		}
 	}
 };
 
@@ -232,6 +249,16 @@ const actions: Actions = {
 			throw new AggregateError(failedFetches.map(result => result.reason as Error), "Failed to completely set schema files");
 		}
 		return initialized;
+	},
+	async setSchema(id) {
+		return Module.ccall("set_schema", "boolean", ["string"], [id]);
+	},
+	async setOption(option, value) {
+		Module.ccall("set_option", null, ["string", "number"], [option, value]);
+	},
+	async setPreference(option, value) {
+		Module.ccall("set_preference", null, ["string", "number"], [option, value]);
+		return option === "pageSize" || actions.deploy();
 	},
 	async processKey(input) {
 		return Module.ccall("process_key", "boolean", ["string"], [input]);

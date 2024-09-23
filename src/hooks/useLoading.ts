@@ -2,10 +2,12 @@ import { useCallback } from "react";
 
 import { useSet } from "react-use";
 
-export default function useLoading(onError?: (error: unknown) => void): [boolean, (asyncTask: () => Promise<void>) => void, () => PromiseWithResolvers<void>] {
+import type { RunAsyncTask } from "../types";
+
+export default function useLoading(onError?: (error: unknown) => void): [boolean, RunAsyncTask, () => PromiseWithResolvers<void>] {
 	const [promises, { add, remove }] = useSet<Promise<void>>();
 
-	const runAsyncTask = useCallback((asyncTask: () => Promise<void>) => {
+	const runAsyncTask: RunAsyncTask = useCallback(asyncTask => {
 		async function processAsyncTask() {
 			try {
 				await asyncTask();

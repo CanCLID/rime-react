@@ -7,7 +7,11 @@ import type { CSSProperties, ReactNode } from "react";
 
 declare const candidateWrapperStylesSource: string;
 
-export default function CandidateWrapper({ caretPos, children }: { caretPos: CaretPos; children: ReactNode }) {
+export default function CandidateWrapper({ caretPos, additionalStyles, children }: {
+	caretPos: CaretPos;
+	additionalStyles?: string;
+	children: ReactNode;
+}) {
 	const panelRef = useRef<HTMLDivElement>(null);
 	const { top: caretTop, bottom: caretBottom, left: caretLeft } = caretPos;
 	let panelStyleX: CSSProperties = { left: caretLeft };
@@ -24,6 +28,7 @@ export default function CandidateWrapper({ caretPos, children }: { caretPos: Car
 	return <div ref={panelRef} style={{ ...panelStyleX, ...panelStyleY }}>
 		<ReactShadowRoot>
 			<style>{candidateWrapperStylesSource}</style>
+			{additionalStyles && <style>{additionalStyles}</style>}
 			<div id="candidate-panel">{children}</div>
 		</ReactShadowRoot>
 	</div>;
