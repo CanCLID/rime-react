@@ -1,15 +1,36 @@
-diff --git a/include/marisa/exception.h b/include/marisa/exception.h
-index 508c6b8..7f17c0a 100644
---- a/include/marisa/exception.h
-+++ b/include/marisa/exception.h
-@@ -62,8 +62,8 @@ class Exception : public std::exception {
+diff --git a/include/marisa/base.h b/include/marisa/base.h
+index bbb1870..1aec444 100644
+--- a/include/marisa/base.h
++++ b/include/marisa/base.h
+@@ -181,8 +181,8 @@ using Exception = std::exception;
+ // MARISA_THROW throws an exception with a filename, a line number, an error
  // code and an error message. The message format is as follows:
  //  "__FILE__:__LINE__: error_code: error_message"
- #define MARISA_THROW(error_code, error_message) \
--  (throw marisa::Exception(__FILE__, __LINE__, error_code, \
--       __FILE__ ":" MARISA_LINE_STR ": " #error_code ": " error_message))
-+  (throw marisa::Exception(__FILE_NAME__, __LINE__, error_code, \
-+       __FILE_NAME__ ":" MARISA_LINE_STR ": " #error_code ": " error_message))
+-#define MARISA_THROW(error_type, error_message)                     \
+-  (throw (error_type)(__FILE__ ":" MARISA_LINE_STR ": " #error_type \
++#define MARISA_THROW(error_type, error_message)                          \
++  (throw (error_type)(__FILE_NAME__ ":" MARISA_LINE_STR ": " #error_type \
+                                ": " error_message))
  
  // MARISA_THROW_IF throws an exception if `condition' is true.
- #define MARISA_THROW_IF(condition, error_code) \
+@@ -191,13 +191,13 @@ using Exception = std::exception;
+ 
+ // MARISA_THROW_SYSTEM_ERROR_IF throws an exception if `condition` is true.
+ // ::GetLastError() or errno should be passed as `error_value`.
+-#define MARISA_THROW_SYSTEM_ERROR_IF(condition, error_value, error_category,   \
+-                                     function_name)                            \
+-  (void)((!(condition)) ||                                                     \
+-         (throw std::system_error(                                             \
+-              std::error_code(error_value, error_category),                    \
+-              __FILE__ ":" MARISA_LINE_STR                                     \
+-                       ": std::system_error: " function_name ": " #condition), \
++#define MARISA_THROW_SYSTEM_ERROR_IF(condition, error_value, error_category,     \
++                                     function_name)                              \
++  (void)((!(condition)) ||                                                       \
++         (throw std::system_error(                                               \
++              std::error_code(error_value, error_category),                      \
++              __FILE_NAME__ ":" MARISA_LINE_STR                                  \
++                       ": std::system_error: " function_name ": " #condition),   \
+           false))
+ 
+ // #ifndef MARISA_USE_EXCEPTIONS
