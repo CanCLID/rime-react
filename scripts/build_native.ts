@@ -1,7 +1,9 @@
-import { $ } from "bun";
-import { platform } from "os";
-import { argv, cwd, exit } from "process";
+import { promises as fs } from "node:fs";
+import { platform } from "node:os";
+import { join } from "node:path";
+import { argv, cwd, exit } from "node:process";
 
+import { run } from "./exec";
 import { patch } from "./utils";
 
 const root = cwd();
@@ -10,113 +12,123 @@ const PLATFORM = platform();
 const dst = "build";
 const dstRime = "build/librime_native";
 
-const CMAKE_INSTALL_PREFIX = `"${root}/librime"`;
-const CMAKE_DEF_COMMON = `\
-    -G Ninja \
-    -DCMAKE_BUILD_TYPE:STRING=Release ${
-	PLATFORM === "win32"
-		? `\
-            -DCMAKE_C_COMPILER=clang \
-            -DCMAKE_CXX_COMPILER=clang++ \
-            -DCMAKE_USER_MAKE_RULES_OVERRIDE:PATH="${root}/librime/cmake/c_flag_overrides.cmake" \
-            -DCMAKE_USER_MAKE_RULES_OVERRIDE_CXX:PATH="${root}/librime/cmake/cxx_flag_overrides.cmake" \
-            -DCMAKE_EXE_LINKER_FLAGS_INIT:STRING=-llibcmt \
-            -DCMAKE_MSVC_RUNTIME_LIBRARY:STRING=MultiThreaded`
-		: ""
-}`;
-const CMAKE_DEF = {
-	raw: `\
-        -B ${dst} \
-        ${CMAKE_DEF_COMMON} \
-        -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_INSTALL_PREFIX} \
-        -DBUILD_SHARED_LIBS:BOOL=OFF \
-    `,
-};
-const CMAKE_DEF_RIME = {
-	raw: `\
-        -B ${dstRime} \
-        ${CMAKE_DEF_COMMON} \
-        -DBUILD_SHARED_LIBS:BOOL=ON \
-        ${PLATFORM === "linux" ? "" : "-DBUILD_STATIC:BOOL=ON"} \
-        -DBUILD_TEST:BOOL=OFF \
-        -DBoost_INCLUDE_DIR:PATH="${root}/build/sysroot/usr/include" \
-        -DENABLE_TIMESTAMP:BOOL=OFF \
-        -DENABLE_LOGGING:BOOL=OFF \
-    `,
-};
+const cmakeDefCommon = [
+	"-G", "Ninja",
+	"-DCMAKE_BUILD_TYPE:STRING=Release",
+	"-DCMAKE_POLICY_VERSION_MINIMUM=3.5",
+];
+if (PLATFORM === "win32") {
+	cmakeDefCommon.push(
+		"-DCMAKE_C_COMPILER=clang",
+		"-DCMAKE_CXX_COMPILER=clang++",
+		`-DCMAKE_USER_MAKE_RULES_OVERRIDE:PATH=${root}/librime/cmake/c_flag_overrides.cmake`,
+		`-DCMAKE_USER_MAKE_RULES_OVERRIDE_CXX:PATH=${root}/librime/cmake/cxx_flag_overrides.cmake`,
+		"-DCMAKE_EXE_LINKER_FLAGS_INIT:STRING=-llibcmt",
+		"-DCMAKE_MSVC_RUNTIME_LIBRARY:STRING=MultiThreaded",
+	);
+}
 
+const cmakeDef = [
+	...cmakeDefCommon,
+	"-B",
+	dst,
+	`-DCMAKE_INSTALL_PREFIX:PATH=${root}/librime`,
+	"-DBUILD_SHARED_LIBS:BOOL=OFF",
+];
+
+const cmakeDefRime = [
+	...cmakeDefCommon,
+	"-DBUILD_SHARED_LIBS:BOOL=ON",
+	...(PLATFORM === "linux" ? [] : ["-DBUILD_STATIC:BOOL=ON"]),
+	"-DBUILD_TEST:BOOL=OFF",
+	`-DBoost_INCLUDE_DIR:PATH=${root}/build/sysroot/usr/include`,
+	"-DENABLE_TIMESTAMP:BOOL=OFF",
+	"-DENABLE_LOGGING:BOOL=OFF",
+];
+
+const env = { ...process.env };
 if (PLATFORM !== "linux") {
-	$.env({ ...import.meta.env, BOOST_ROOT: `${root}/boost` });
+	env.BOOST_ROOT = `${root}/boost`;
 }
 
 let hasError = false;
 
-const targetHandlers = {
+const targetHandlers: Record<string, () => Promise<void>> = {
 	async "yaml-cpp"() {
 		console.log("Building yaml-cpp");
-		$.cwd("librime/deps/yaml-cpp");
-		await $`rm -rf ${dst}`;
-		await $`cmake . \
-            ${CMAKE_DEF} \
-            -DYAML_CPP_BUILD_CONTRIB:BOOL=OFF \
-            -DYAML_CPP_BUILD_TESTS:BOOL=OFF \
-            -DYAML_CPP_BUILD_TOOLS:BOOL=OFF \
-        `;
-		await $`cmake --build ${dst}`;
-		await $`cmake --install ${dst}`;
+		await fs.rm(join("librime/deps/yaml-cpp", dst), { recursive: true, force: true });
+		await run(
+			"cmake",
+			[
+				".",
+				...cmakeDef,
+				"-DYAML_CPP_BUILD_CONTRIB:BOOL=OFF",
+				"-DYAML_CPP_BUILD_TESTS:BOOL=OFF",
+				"-DYAML_CPP_BUILD_TOOLS:BOOL=OFF",
+			],
+			{ cwd: "librime/deps/yaml-cpp", env },
+		);
+		await run("cmake", ["--build", dst], { cwd: "librime/deps/yaml-cpp", env });
+		await run("cmake", ["--install", dst], { cwd: "librime/deps/yaml-cpp", env });
 	},
 
 	async "leveldb"() {
 		console.log("Building leveldb");
-		$.cwd("librime/deps/leveldb");
-		await $`rm -rf ${dst}`;
-		await $`cmake . \
-            ${CMAKE_DEF} \
-            -DCMAKE_CXX_FLAGS:STRING=-Wno-error=deprecated-declarations \
-            -DLEVELDB_BUILD_BENCHMARKS:BOOL=OFF \
-            -DLEVELDB_BUILD_TESTS:BOOL=OFF \
-        `;
-		await $`cmake --build ${dst}`;
-		await $`cmake --install ${dst}`;
+		await fs.rm(join("librime/deps/leveldb", dst), { recursive: true, force: true });
+		await run(
+			"cmake",
+			[
+				".",
+				...cmakeDef,
+				"-DCMAKE_CXX_FLAGS:STRING=-Wno-error=deprecated-declarations",
+				"-DLEVELDB_BUILD_BENCHMARKS:BOOL=OFF",
+				"-DLEVELDB_BUILD_TESTS:BOOL=OFF",
+			],
+			{ cwd: "librime/deps/leveldb", env },
+		);
+		await run("cmake", ["--build", dst], { cwd: "librime/deps/leveldb", env });
+		await run("cmake", ["--install", dst], { cwd: "librime/deps/leveldb", env });
 	},
 
 	async "marisa"() {
 		console.log("Building marisa-trie");
-		$.cwd("librime/deps/marisa-trie");
-		await patch("marisa.patch");
-		await $`rm -rf ${dst}`;
-		await $`cmake . ${CMAKE_DEF}`;
-		await $`cmake --build ${dst}`;
-		await $`cmake --install ${dst}`;
+		await patch("marisa.patch", "librime/deps/marisa-trie");
+		await fs.rm(join("librime/deps/marisa-trie", dst), { recursive: true, force: true });
+		await run("cmake", [".", ...cmakeDef], { cwd: "librime/deps/marisa-trie", env });
+		await run("cmake", ["--build", dst], { cwd: "librime/deps/marisa-trie", env });
+		await run("cmake", ["--install", dst], { cwd: "librime/deps/marisa-trie", env });
 	},
 
 	async "opencc"() {
 		console.log("Building opencc");
-		$.cwd("librime/deps/opencc");
-		await patch("opencc.patch");
-		await $`rm -rf ${dst}`;
-		await $`cmake . \
-            ${CMAKE_DEF} \
-            -DCMAKE_FIND_ROOT_PATH:PATH=${CMAKE_INSTALL_PREFIX} \
-            -DENABLE_DARTS:BOOL=OFF \
-            -DUSE_SYSTEM_MARISA:BOOL=ON \
-        `;
-		await $`cmake --build ${dst}`;
-		await $`cmake --install ${dst}`;
+		await patch("opencc.patch", "librime/deps/opencc");
+		await fs.rm(join("librime/deps/opencc", dst), { recursive: true, force: true });
+		await run(
+			"cmake",
+			[
+				".",
+				...cmakeDef,
+				`-DCMAKE_FIND_ROOT_PATH:PATH=${root}/librime`,
+				"-DENABLE_DARTS:BOOL=OFF",
+				"-DUSE_SYSTEM_MARISA:BOOL=ON",
+			],
+			{ cwd: "librime/deps/opencc", env },
+		);
+		await run("cmake", ["--build", dst], { cwd: "librime/deps/opencc", env });
+		await run("cmake", ["--install", dst], { cwd: "librime/deps/opencc", env });
 	},
 
 	async "glog"() {
-		console.error(`'glog' need not be built in phase 'native'`);
+		console.error("'glog' need not be built in phase 'native'");
 		hasError = true;
 	},
 
 	async "rime"() {
 		console.log("Building librime");
-		$.cwd();
 		await patch("librime.patch", "librime");
-		await $`rm -rf ${dstRime}`;
-		await $`cmake librime ${CMAKE_DEF_RIME}`;
-		await $`cmake --build ${dstRime}`;
+		await fs.rm(dstRime, { recursive: true, force: true });
+		await run("cmake", ["librime", "-B", dstRime, ...cmakeDefRime], { env });
+		await run("cmake", ["--build", dstRime], { env });
 	},
 };
 
@@ -127,7 +139,7 @@ function needNotBeBuilt(target: string) {
 	};
 }
 
-const nonPosixTargets: (keyof typeof targetHandlers)[] = ["yaml-cpp", "leveldb", "marisa", "opencc"];
+const nonPosixTargets = ["yaml-cpp", "leveldb", "marisa", "opencc"];
 if (PLATFORM === "linux") {
 	for (const target of nonPosixTargets) {
 		targetHandlers[target] = needNotBeBuilt(target);
@@ -135,9 +147,10 @@ if (PLATFORM === "linux") {
 }
 
 const buildTargets = new Set(argv.slice(2));
-const unknownTargets = buildTargets.difference(new Set(Object.keys(targetHandlers)));
+const knownTargets = new Set(Object.keys(targetHandlers));
+const unknownTargets = new Set([...buildTargets].filter(target => !knownTargets.has(target)));
 if (unknownTargets.size) {
-	throw new Error(`Unknown targets: '${Array.from(unknownTargets).join("', '")}'`);
+	throw new Error(`Unknown targets: '${[...unknownTargets].join("', '")}'`);
 }
 
 for (const [target, handler] of Object.entries(targetHandlers)) {
@@ -150,8 +163,8 @@ if (hasError) {
 }
 
 if (!buildTargets.size) {
-	const allTargets: (keyof typeof targetHandlers)[] = [...(PLATFORM === "linux" ? [] : nonPosixTargets), "rime"];
-	for (const handler of allTargets.map(target => targetHandlers[target])) {
-		await handler();
+	const allTargets = PLATFORM === "linux" ? ["rime"] : [...nonPosixTargets, "rime"];
+	for (const target of allTargets) {
+		await targetHandlers[target]();
 	}
 }

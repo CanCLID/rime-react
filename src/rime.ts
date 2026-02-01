@@ -29,7 +29,7 @@ const listeners = {} as { [K in keyof Listeners]?: Set<Listeners[K]> };
 
 // Prevent automatic elimination
 // eslint-disable-next-line no-useless-concat
-const enableLogging = typeof process === "object" && process[("env" + "") as "env"].NODE_ENV !== "production";
+const enableLogging = typeof process === "object" && process[("env" + "") as "env"]["NODE_ENV"] !== "production";
 
 declare const workerSource: string;
 

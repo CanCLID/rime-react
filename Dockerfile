@@ -22,10 +22,9 @@ ENV PATH ${PATH}:/emsdk/upstream/emscripten
 COPY / /rime-react
 WORKDIR /rime-react
 
-RUN npm i -g bun
-RUN bun i
-RUN bun run boost
-RUN bun run native
-RUN bun run lib
-RUN bun run wasm
-RUN bun run build
+RUN npm ci
+RUN npm run boost
+RUN npm run native
+RUN npm run lib
+RUN npm run wasm
+RUN npm run build

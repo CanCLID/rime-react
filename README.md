@@ -5,24 +5,32 @@ RIME React is a [React](https://reactjs.org) Component for the [RIME Input Metho
 ## Installation
 
 - **npm:** `npm i rime-react`
-- **bun:** `bun i rime-react`
 
 ## Usage
 
 See the [RIME React Demo repo](https://github.com/CanCLID/rime-react-demo).
 
+## Example (CDN Demo)
+
+This repo includes a Vite demo app under `example/` that loads schema files from the
+`librime` CDN. To run it:
+
+```sh
+npm install
+npm run build
+cd example
+npm install
+npm run start
+```
+
+The demo copies `dist/rime.js` and `dist/rime.wasm` into `example/assets/` during
+the Vite build, while schema files are fetched from the CDN.
+
 ## Development
 
 ### Prerequisites
 
-- [Bun](https://bun.sh)
-
-  Execute the command provided on the website to install Bun. Alternatively, you may install it with npm:
-
-  ```sh
-  npm i -g bun
-  ```
-
+- [Node.js](https://nodejs.org) (npm is required; CI uses Node 22)
 - [CMake](https://cmake.org)
 - [Ninja](https://ninja-build.org)
 - [LLVM](https://llvm.org) (Windows only)
@@ -44,6 +52,23 @@ See the [RIME React Demo repo](https://github.com/CanCLID/rime-react-demo).
 - [Emscripten](https://emscripten.org)
 
   Follow the [installation guide](https://emscripten.org/docs/getting_started/downloads.html) to install Emscripten.
+  Common setup options:
+
+  ```sh
+  # macOS (Homebrew)
+  brew install emscripten
+  ```
+
+  ```sh
+  # emsdk (all platforms)
+  git clone https://github.com/emscripten-core/emsdk.git
+  cd emsdk
+  ./emsdk install latest
+  ./emsdk activate latest
+  source ./emsdk_env.sh
+  ```
+
+  You must have `emcmake` and `em++` available in the same shell that runs the build.
 
 ### Compilation
 
@@ -62,14 +87,17 @@ sudo apt install -y \
 Then, execute the following commands in order:
 
 ```sh
-bun run boost
-bun run native
-bun run lib
-bun run wasm
+npm install
+npm run boost
+npm run native
+npm run lib
+npm run wasm
 ```
+
+If you see `spawn emcmake ENOENT`, Emscripten is not installed or not on `PATH`.
 
 ### Building the Project
 
 ```sh
-bun run build
+npm run build
 ```

@@ -12,7 +12,7 @@
 	"dependencies": {
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
-		"rime-react": "^0.1.1"
+		"rime-react": "file:.."
 	},
 	"devDependencies": {
 		"@types/react": "^18.3.7",

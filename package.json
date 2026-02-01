@@ -25,15 +25,15 @@
 	"types": "./dist/index.d.ts",
 	"files": ["./dist"],
 	"scripts": {
-		"boost": "bun scripts/prepare_boost.ts",
-		"native": "bun scripts/build_native.ts",
-		"lib": "bun scripts/build_lib.ts",
-		"wasm": "bun scripts/build_wasm.ts",
-		"build": "bun scripts/build_pkg.ts"
+		"boost": "tsx scripts/prepare_boost.ts",
+		"native": "tsx scripts/build_native.ts",
+		"lib": "tsx scripts/build_lib.ts",
+		"wasm": "tsx scripts/build_wasm.ts",
+		"build": "tsx scripts/build_pkg.ts"
 	},
 	"peerDependencies": {
-		"react": ">=16.8",
-		"react-dom": ">=16.8"
+		"react": ">=18",
+		"react-dom": ">=18"
 	},
 	"dependencies": {
 		"idb": "^8.0.0",
@@ -43,7 +43,7 @@
 		"use-local-storage-state": "^19.4.0"
 	},
 	"devDependencies": {
-		"@types/bun": "^1.1.9",
+		"@types/node": "^22.10.6",
 		"@types/emscripten": "^1.39.13",
 		"@types/react": "^18.3.7",
 		"@types/react-dom": "^18.3.0",
@@ -51,6 +51,7 @@
 		"@typescript-eslint/eslint-plugin": "^7.18.0",
 		"@typescript-eslint/parser": "^7.18.0",
 		"@vitejs/plugin-react-swc": "^3.7.0",
+		"dts-bundle-generator": "^9.5.1",
 		"esbuild": "^0.23.1",
 		"eslint": "^8.57.1",
 		"eslint-plugin-import": "^2.30.0",
@@ -59,6 +60,9 @@
 		"eslint-plugin-react": "^7.36.1",
 		"eslint-plugin-react-hooks": "^4.6.2",
 		"eslint-plugin-react-refresh": "^0.4.12",
+		"react": "^18.3.1",
+		"react-dom": "^18.3.1",
+		"tsx": "^4.19.3",
 		"typescript": "^5.6.2"
 	}
 }

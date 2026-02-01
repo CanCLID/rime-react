@@ -50,9 +50,11 @@ function Demo() {
 			</div>
 			<input type="text" className="text-field" {...NO_AUTO_FILL} defaultValue="A universal and extensible input method available at your fingertips" />
 			<textarea className="text-field" {...NO_AUTO_FILL} defaultValue="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum." />
-			<div contentEditable className="text-field" {...NO_AUTO_FILL}>
-				<b>The <mark>RIME React</mark> component library</b> is a <i>React</i> wrapper for <u>RIME</u>, a lightweight and highly customizable input method engine.
-			</div>
+			<textarea
+				className="text-field"
+				{...NO_AUTO_FILL}
+				defaultValue="The RIME React component library is a React wrapper for RIME, a lightweight and highly customizable input method engine."
+			/>
 		</main>
 	</RimeReact>;
 }

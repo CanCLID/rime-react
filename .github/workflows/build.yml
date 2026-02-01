@@ -42,30 +42,30 @@ jobs:
                   choco upgrade -y llvm
                   pip install ninja
                   echo "$env:ProgramFiles\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-            - name: Setup Bun
-              uses: oven-sh/setup-bun@v1
+            - name: Setup Node
+              uses: actions/setup-node@v4
               with:
-                  bun-version: latest
+                  node-version: 22
             - name: Setup Emscripten SDK
               uses: mymindstorm/setup-emsdk@v14
             - name: Install Package Dependencies
               run: |
-                  bun i
+                  npm ci
             - name: Prepare Boost
               run: |
-                  bun run boost
+                  npm run boost
             - name: Build Native
               run: |
-                  bun run native
+                  npm run native
             - name: Build Library
               run: |
-                  bun run lib
+                  npm run lib
             - name: Build WebAssembly
               run: |
-                  bun run wasm
+                  npm run wasm
             - name: Build App
               run: |
-                  bun run build
+                  npm run build
     docker:
         runs-on: ubuntu-latest
         strategy:

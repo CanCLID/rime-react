@@ -1,4 +1,6 @@
-import { $ } from "bun";
+import { promises as fs } from "node:fs";
+
+import { run } from "./exec";
 
 const libPath = "build/sysroot/usr/lib";
 const exportedFunctions = [
@@ -11,32 +13,48 @@ const exportedFunctions = [
 	"_deploy",
 ].join();
 
-const compileArgs = {
-	raw: `\
-        -std=c++17 \
-        ${import.meta.env["BUILD_TYPE"] === "Debug" ? "-g" : "-O2 -DBOOST_DISABLE_ASSERTS -DBOOST_DISABLE_CURRENT_LOCATION"} \
-        -s ALLOW_MEMORY_GROWTH=1 \
-        -s MAXIMUM_MEMORY=4GB \
-        -s EXPORTED_FUNCTIONS=${exportedFunctions} \
-        -s EXPORTED_RUNTIME_METHODS=["ccall","FS"] \
-        -I build/sysroot/usr/include \
-        -o dist/rime.js \
-    `,
-};
+const buildType = process.env.BUILD_TYPE ?? "Release";
 
-const linkArgs = {
-	raw: `\
-        -fexceptions \
-        -l idbfs.js \
-        -L ${libPath} \
-        -Wl,--whole-archive -l rime -Wl,--no-whole-archive \
-        -l yaml-cpp \
-        -l leveldb \
-        -l marisa \
-        -l opencc \
-        ${(await Bun.file(`${libPath}/librime.a`).text()).includes("LogMessage") ? "-l glog" : ""} \
-    `,
-};
+const compileArgs = [
+	"-std=c++17",
+	...(buildType === "Debug" ? ["-g"] : ["-O2", "-DBOOST_DISABLE_ASSERTS", "-DBOOST_DISABLE_CURRENT_LOCATION"]),
+	"-s",
+	"ALLOW_MEMORY_GROWTH=1",
+	"-s",
+	"MAXIMUM_MEMORY=4GB",
+	"-s",
+	`EXPORTED_FUNCTIONS=${exportedFunctions}`,
+	"-s",
+	"EXPORTED_RUNTIME_METHODS=[\"ccall\",\"FS\"]",
+	"-I",
+	"build/sysroot/usr/include",
+	"-o",
+	"dist/rime.js",
+];
 
-await $`mkdir -p dist`;
-await $`em++ -v ${compileArgs} wasm/api.cpp ${linkArgs}`; // --emit-tsd ${root}/src/rime.d.ts
+const libText = await fs.readFile(`${libPath}/librime.a`, "utf8");
+const hasLogMessage = libText.includes("LogMessage");
+
+const linkArgs = [
+	"-fexceptions",
+	"-l",
+	"idbfs.js",
+	"-L",
+	libPath,
+	"-Wl,--whole-archive",
+	"-l",
+	"rime",
+	"-Wl,--no-whole-archive",
+	"-l",
+	"yaml-cpp",
+	"-l",
+	"leveldb",
+	"-l",
+	"marisa",
+	"-l",
+	"opencc",
+	...(hasLogMessage ? ["-l", "glog"] : []),
+];
+
+await fs.mkdir("dist", { recursive: true });
+await run("em++", ["-v", ...compileArgs, "wasm/api.cpp", ...linkArgs]);
