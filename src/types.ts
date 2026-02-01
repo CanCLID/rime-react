@@ -1,21 +1,21 @@
 export interface RimeAPI {
 	init(): boolean;
-	process_key(input: string): string;
-	select_candidate(index: number): string;
-	delete_candidate(index: number): string;
-	flip_page(backward: boolean): string;
-	clear_input(): string;
+	process_key(input: string): boolean;
+	select_candidate(index: number): boolean;
+	delete_candidate(index: number): boolean;
+	flip_page(backward: boolean): boolean;
+	clear_input(): void;
 	deploy(): boolean;
 }
 
 export interface Actions {
 	initialize(baseURL: string | URL, pathToRimeJS: string | URL, pathToRimeWASM: string | URL): Promise<void>;
 	setSchemaFiles(prefix: string, schemaFiles: Record<string, string>): Promise<boolean>;
-	processKey(input: string): Promise<RimeResult>;
-	selectCandidate(index: number): Promise<RimeResult>;
-	deleteCandidate(index: number): Promise<RimeResult>;
-	flipPage(backward: boolean): Promise<RimeResult>;
-	clearInput(): Promise<RimeResult>;
+	processKey(input: string): Promise<boolean>;
+	selectCandidate(index: number): Promise<boolean>;
+	deleteCandidate(index: number): Promise<boolean>;
+	flipPage(backward: boolean): Promise<boolean>;
+	clearInput(): Promise<void>;
 	deploy(): Promise<boolean>;
 }
 
@@ -45,20 +45,21 @@ interface RimeNotComposing {
 }
 
 interface RimePayload {
-	success: boolean;
 	committed?: string;
 }
 
-export type RimeResult = (RimeComposing | RimeNotComposing) & RimePayload;
+export type RimeInputStatus = (RimeComposing | RimeNotComposing) & RimePayload;
 
 export type RimeDeployStatus = "start" | "success" | "failure";
 
-export interface RimeNotification {
+export interface RimeEvent {
 	deploy: RimeDeployStatus;
+	input: RimeInputStatus;
 }
 
 export interface ListenerArgsMap {
 	deployStatusChanged: [status: RimeDeployStatus];
+	inputStatusChanged: [status: RimeInputStatus];
 }
 
 interface NamedMessage<K extends keyof Actions> {

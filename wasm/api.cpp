@@ -4,6 +4,9 @@
 #include <string>
 
 #define APP_NAME "rime.react"
+#define EMIT_RIME_EVENT(type, value)                                          \
+  EM_ASM(onRimeEvent(UTF8ToString($0), JSON.parse(UTF8ToString($1))), (type), \
+         to_json(value))
 
 namespace rime_react {
 
@@ -21,7 +24,7 @@ inline const char* to_json(T& obj) {
 }
 
 void handler(void*, RimeSessionId, const char* type, const char* value) {
-  EM_ASM(onRimeNotification(UTF8ToString($0), UTF8ToString($1)), type, value);
+  EMIT_RIME_EVENT(type, value);
 }
 
 bool start_rime(bool restart) {
@@ -42,29 +45,27 @@ bool stop_rime() {
   return false;
 }
 
-const char* process(Bool success) {
-  boost::json::object result;
-  result["success"] = !!success;
-  rime->free_commit(&commit);
+void emit_input_status() {
+  boost::json::object status;
   if (rime->get_commit(session_id, &commit)) {
-    result["committed"] = commit.text;
+    status["committed"] = commit.text;
   }
-  rime->free_context(&context);
+  rime->free_commit(&commit);
   rime->get_context(session_id, &context);
-  result["isComposing"] = !!context.composition.length;
-  if (context.composition.length) {
-    RimeComposition& composition = context.composition;
+  RimeComposition& composition = context.composition;
+  status["isComposing"] = !!composition.length;
+  if (composition.length) {
     std::string preedit = composition.preedit;
     boost::json::object pre_edit;
     pre_edit["before"] = preedit.substr(0, composition.sel_start);
     pre_edit["active"] = preedit.substr(
         composition.sel_start, composition.sel_end - composition.sel_start);
     pre_edit["after"] = preedit.substr(composition.sel_end);
-    result["inputBuffer"] = pre_edit;
+    status["inputBuffer"] = pre_edit;
     RimeMenu& menu = context.menu;
-    result["page"] = menu.page_no;
-    result["isLastPage"] = !!menu.is_last_page;
-    result["highlightedIndex"] = menu.highlighted_candidate_index;
+    status["page"] = menu.page_no;
+    status["isLastPage"] = !!menu.is_last_page;
+    status["highlightedIndex"] = menu.highlighted_candidate_index;
     boost::json::array candidates;
     for (size_t i = 0; i < menu.num_candidates; ++i) {
       boost::json::object candidate;
@@ -78,9 +79,10 @@ const char* process(Bool success) {
       }
       candidates.push_back(candidate);
     }
-    result["candidates"] = candidates;
+    status["candidates"] = candidates;
   }
-  return to_json(result);
+  rime->free_context(&context);
+  EMIT_RIME_EVENT("input", status);
 }
 
 extern "C" {
@@ -101,25 +103,33 @@ bool init() {
   return false;
 }
 
-const char* process_key(const char* input) {
-  return process(rime->simulate_key_sequence(session_id, input));
+bool process_key(const char* input) {
+  Bool success = rime->simulate_key_sequence(session_id, input);
+  emit_input_status();
+  return success;
 }
 
-const char* select_candidate(int index) {
-  return process(rime->select_candidate_on_current_page(session_id, index));
+bool select_candidate(int index) {
+  Bool success = rime->select_candidate_on_current_page(session_id, index);
+  emit_input_status();
+  return success;
 }
 
-const char* delete_candidate(int index) {
-  return process(rime->delete_candidate_on_current_page(session_id, index));
+bool delete_candidate(int index) {
+  Bool success = rime->delete_candidate_on_current_page(session_id, index);
+  emit_input_status();
+  return success;
 }
 
-const char* flip_page(bool backward) {
-  return process(rime->change_page(session_id, backward));
+bool flip_page(bool backward) {
+  Bool success = rime->change_page(session_id, backward);
+  emit_input_status();
+  return success;
 }
 
-const char* clear_input() {
+void clear_input() {
   rime->clear_composition(session_id);
-  return process(True);
+  emit_input_status();
 }
 
 bool deploy() {
