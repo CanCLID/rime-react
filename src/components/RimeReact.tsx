@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
 import CandidatePanel from "./CandidatePanel";
 import { RimeContext, RimeInstanceContext } from "../contexts";
@@ -27,7 +28,7 @@ export default function RimeReact({
 	includeElements?: string;
 	onError?(error: unknown): void;
 	additionalStylesForCandidatePanel?: string;
-	children: JSX.Element;
+	children: ReactNode;
 }) {
 	const [rimeInstance, setRimeInstance] = useState<RimeInstance | null>(null);
 	const [isLoading, runAsyncTask, startAsyncTask] = useLoading(onError);

@@ -28,7 +28,7 @@ export default function CandidatePanel({
 	const [writingMode] = useLocalStorageState("writingMode", { defaultValue: WritingMode.HorizontalTBLR });
 	const [showComments] = useLocalStorageState("showComments", { defaultValue: ShowComments.Always });
 	const previousAction = useRef("perform action");
-	const previousKey = useRef<string>();
+	const previousKey = useRef<string | undefined>(undefined);
 
 	useEffect(() =>
 		Rime.subscribe("inputStatusChanged", status =>

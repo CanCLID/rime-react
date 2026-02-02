@@ -6,7 +6,7 @@ import type { RunAsyncTask } from "../types";
 
 export default function Toolbar({ loading, runAsyncTask }: { loading: boolean; runAsyncTask: RunAsyncTask }) {
 	const [debouncedLoading, setDebouncedLoading] = useState(loading);
-	const timeout = useRef<ReturnType<typeof setTimeout>>();
+	const timeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 	useEffect(() => {
 		function clear() {
 			if (typeof timeout.current !== "undefined") {
