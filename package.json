@@ -23,7 +23,10 @@
 	"type": "module",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
-	"files": ["./dist"],
+	"files": [
+		"dist",
+		"assets"
+	],
 	"scripts": {
 		"boost": "tsx scripts/prepare_boost.ts",
 		"native": "tsx scripts/build_native.ts",

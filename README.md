@@ -135,6 +135,98 @@ with `rime_deployer --build <user_data_dir> <shared_data_dir> <staging_dir>`.
 Copy the source YAMLs plus `build/*` into `example/public/schema/` (or your app’s
 public assets) and update `schemaFilesToSHA256` in `example/index.tsx`.
 
+### OpenCC Assets (Character Conversion)
+
+Rime’s simplifier filter loads OpenCC configs and `.ocd2` dictionaries from
+`opencc/` under the shared data directory. This repo ships a full OpenCC bundle
+in `assets/opencc/` (configs + dictionaries for HK/TW/JP variants). To enable
+conversion in your app, copy `node_modules/rime-react/assets/opencc/` into your
+schema assets (for example `public/schema/opencc/`) and include those files in
+`schemaFilesToSHA256`.
+
+`.ocd2` is OpenCC’s binary dictionary format (generated from the `.txt`
+dictionaries and stored as a Marisa trie for fast lookup). The JSON configs
+(`t2s.json`, `t2hk.json`, etc.) reference these `.ocd2` files by name, so they
+must be present for conversion to work.
+
+### New App: One Schema + OpenCC (Step-by-Step)
+
+Below is a minimal, end-to-end flow for a new app that has one
+`my.schema.yaml` and one `my.dict.yaml`.
+
+1. Install the package:
+
+```sh
+npm i rime-react
+```
+
+2. Create a schema assets folder in your app and copy your YAMLs:
+
+```sh
+mkdir -p public/schema
+cp /path/to/my.schema.yaml /path/to/my.dict.yaml public/schema/
+```
+
+3. Build the schema binaries using `rime_deployer` (run once from this repo).
+`rime_deployer --compile` takes four arguments:
+`<schema_path> <user_data_dir> <shared_data_dir> <build_dir>`.
+For web apps it’s common to point **user** and **shared** to the same schema
+folder, which is why the path is repeated below.
+
+```sh
+# in a checkout of this repo
+npm install
+npm run native
+
+./build/librime_native/bin/rime_deployer --compile \
+  /absolute/path/to/your/app/public/schema/my.schema.yaml \
+  /absolute/path/to/your/app/public/schema \
+  /absolute/path/to/your/app/public/schema \
+  /absolute/path/to/your/app/public/schema/build
+```
+
+This generates `build/my.schema.yaml`, `build/my.table.bin`, `build/my.prism.bin`,
+and `build/my.reverse.bin` (if enabled).
+
+4. Add OpenCC assets (for Simplified/HK/TW/JP variants):
+
+```sh
+cp -R node_modules/rime-react/assets/opencc public/schema/opencc
+```
+
+5. Inside the app, generate SHA-256 hashes and wire them into your app:
+
+```sh
+node - <<'NODE'
+import { createHash } from 'crypto';
+import { readdir, readFile } from 'fs/promises';
+import { join, posix } from 'path';
+
+async function walk(dir, base) {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) files.push(...await walk(full, base));
+    else files.push(posix.normalize(full.replace(base + '/', '')));
+  }
+  return files;
+}
+
+const base = 'public/schema';
+const files = (await walk(base, base)).sort();
+const map = {};
+for (const rel of files) {
+  const buf = await readFile(join(base, rel));
+  map[rel] = createHash('sha256').update(buf).digest('hex');
+}
+console.log(JSON.stringify(map, null, 2));
+NODE
+```
+
+Paste the JSON into `schemaFilesToSHA256` in your app and set
+`schemaFilesFetchPrefix` to your schema asset URL (e.g. `/schema/`).
+
 ### Building the Project
 
 ```sh
