@@ -1,4 +1,4 @@
-import type { Actions, ListenerArgsMap, Message } from "./types";
+import type { Actions, ListenerArgsMap, Message, RimeDeployStatus, RimeInputStatus } from "./types";
 
 type ListenerPayload = {
 	[K in keyof ListenerArgsMap]: {
@@ -20,12 +20,18 @@ interface ErrorPayload {
 
 type Payload = ListenerPayload | SuccessPayload | ErrorPayload;
 
-type Listeners = { [K in keyof ListenerArgsMap]: (...args: ListenerArgsMap[K]) => void };
+type Listeners = {
+	deployStatusChanged: (status: RimeDeployStatus) => void;
+	inputStatusChanged: (status: RimeInputStatus) => void;
+};
 
 let running: Message | null = null;
 const queue: Message[] = [];
 
-const listeners = {} as { [K in keyof Listeners]?: Set<Listeners[K]> };
+const listeners: { [K in keyof Listeners]: Set<Listeners[K]> } = {
+	deployStatusChanged: new Set(),
+	inputStatusChanged: new Set(),
+};
 
 let enableLogging = false;
 try {
@@ -33,7 +39,7 @@ try {
 	// The concatenation prevents automatic elimination during library bundling and transforms to
 	// `process.env.NODE_ENV` in the output.
 	// eslint-disable-next-line no-useless-concat
-	enableLogging = process[("env" + "") as "env"].NODE_ENV !== "production";
+	enableLogging = process[("env" + "") as "env"]["NODE_ENV"] !== "production";
 }
 catch {
 	// The module is running in an environment where `process` is not defined, such as in a browser.
@@ -51,10 +57,14 @@ export async function initialize(pathToRimeJS: string | URL, pathToRimeWASM: str
 		if (enableLogging) console.log("receive", data);
 		const { type } = data;
 		if (type === "listener") {
-			const { name, args } = data;
-			if (name in listeners) {
-				for (const listener of listeners[name]!) {
-					listener(...args);
+			if (data.name === "deployStatusChanged") {
+				for (const listener of listeners.deployStatusChanged) {
+					listener(...data.args);
+				}
+			}
+			else if (data.name === "inputStatusChanged") {
+				for (const listener of listeners.inputStatusChanged) {
+					listener(...data.args);
 				}
 			}
 		}
@@ -116,15 +126,12 @@ export const {
 	deploy,
 } = actions;
 
-export function subscribe<K extends keyof Listeners>(type: K, callback: Listeners[K]) {
-	(listeners[type] ||= new Set()).add(callback);
+export function subscribe(type: "deployStatusChanged", callback: Listeners["deployStatusChanged"]): () => void;
+export function subscribe(type: "inputStatusChanged", callback: Listeners["inputStatusChanged"]): () => void;
+export function subscribe(type: keyof Listeners, callback: Listeners[keyof Listeners]) {
+	const set = listeners[type] as Set<Listeners[keyof Listeners]>;
+	set.add(callback);
 	return () => {
-		if (listeners[type]) {
-			listeners[type].delete(callback);
-			if (!listeners[type].size) {
-				// eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-				delete listeners[type];
-			}
-		}
+		set.delete(callback);
 	};
 }
