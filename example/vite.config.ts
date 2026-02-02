@@ -6,7 +6,7 @@ import { viteStaticCopy } from "vite-plugin-static-copy";
 import type { UserConfig } from "vite";
 
 export default {
-	base: "./",
+	base: "/rime-react/",
 	plugins: [
 		react(),
 		viteStaticCopy({
