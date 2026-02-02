@@ -18,8 +18,14 @@ std::string json_string;
 RimeApi* rime = rime_get_api();
 
 template <typename T>
-inline const char* to_json(T& obj) {
+inline const char* to_json(const T& obj) {
   json_string = boost::json::serialize(obj);
+  return json_string.c_str();
+}
+
+inline const char* to_json(const char* value) {
+  json_string =
+      boost::json::serialize(boost::json::string(value ? value : ""));
   return json_string.c_str();
 }
 
