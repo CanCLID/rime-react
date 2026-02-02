@@ -9,8 +9,8 @@ const NO_AUTO_FILL = {
 } as const;
 
 const assetsPrefix = process.env.NODE_ENV === "production" ? "" : "/assets/";
-// Keep this in sync with the librime submodule commit and update the hashes below.
-const librimeCommit = "c6f9f6eb6080ec426a02375f6da48c69a8191225";
+// Schema files live in example/public/schema. Update hashes when those files change.
+const schemaFilesFetchPrefix = new URL("schema/", window.location.href).toString();
 
 function Loading() {
 	return useRimeContext().isLoading && <>
@@ -23,7 +23,7 @@ function Demo() {
 	return <RimeReact
 		pathToRimeJS={`${assetsPrefix}rime.js`}
 		pathToRimeWASM={`${assetsPrefix}rime.wasm`}
-		schemaFilesFetchPrefix={`https://cdn.jsdelivr.net/gh/CanCLID/librime@${librimeCommit}/data/minimal`}
+		schemaFilesFetchPrefix={schemaFilesFetchPrefix}
 		schemaFilesToSHA256={{
 			"build/cangjie5.prism.bin": "67694e9f7f611458d39dd92b856b7b4e385c6886947bfda9213257ffa2172b70",
 			"build/cangjie5.reverse.bin": "55418bd912ed2622dfe02cb57d30355b85de631283fcc14889338f32e8f0cc24",

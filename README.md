@@ -10,10 +10,10 @@ RIME React is a [React](https://reactjs.org) Component for the [RIME Input Metho
 
 See the [RIME React Demo repo](https://github.com/CanCLID/rime-react-demo).
 
-## Example (CDN Demo)
+## Example (Local Schema Demo)
 
-This repo includes a Vite demo app under `example/` that loads schema files from the
-`librime` CDN. To run it:
+This repo includes a Vite demo app under `example/` that loads prebuilt schema files
+from `example/public/schema/`. To run it:
 
 ```sh
 npm install
@@ -24,7 +24,7 @@ npm run start
 ```
 
 The demo copies `dist/rime.js` and `dist/rime.wasm` into `example/assets/` during
-the Vite build, while schema files are fetched from the CDN.
+the Vite build, while schema files are served from `example/public/schema/`.
 
 ## Development
 
@@ -95,6 +95,45 @@ npm run wasm
 ```
 
 If you see `spawn emcmake ENOENT`, Emscripten is not installed or not on `PATH`.
+
+### Building Schema Binaries
+
+Use the native `rime_deployer` tool to compile `.schema.yaml` + `.dict.yaml` into
+the `.bin` artifacts used by the web runtime.
+
+1. Build native tools (once):
+
+```sh
+npm install
+npm run native
+```
+
+This produces `build/librime_native/bin/rime_deployer`.
+
+2. Prepare a data directory containing your schema and dictionary:
+
+```sh
+mkdir -p /tmp/rime-data
+cp /path/to/my.schema.yaml /path/to/my.dict.yaml /tmp/rime-data/
+# include any referenced files (e.g. symbols.yaml, *.txt, custom configs)
+```
+
+3. Compile the schema:
+
+```sh
+./build/librime_native/bin/rime_deployer --compile \
+  /tmp/rime-data/my.schema.yaml \
+  /tmp/rime-data /tmp/rime-data /tmp/rime-data/build
+```
+
+Outputs land in `/tmp/rime-data/build/` (for example `my.schema.yaml`,
+`my.table.bin`, `my.prism.bin`, and `my.reverse.bin` if enabled).
+
+If you maintain a `default.yaml` with `schema_list`, you can compile all schemas
+with `rime_deployer --build <user_data_dir> <shared_data_dir> <staging_dir>`.
+
+Copy the source YAMLs plus `build/*` into `example/public/schema/` (or your app’s
+public assets) and update `schemaFilesToSHA256` in `example/index.tsx`.
 
 ### Building the Project
 
