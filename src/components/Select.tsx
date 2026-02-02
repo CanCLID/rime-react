@@ -11,7 +11,7 @@ export default function Select<T extends string>({ label, values, state, setStat
 			<span className="control-label select-label">{label}</span>
 			<select className="control-element select-element" value={state} onChange={event => setState(event.target.value as T)}>
 				{(Object.entries(values) as [T, string][]).map(
-					([value, label]) => <select key={value} value={value}>{label}</select>,
+					([value, optionLabel]) => <option key={value} value={value}>{optionLabel}</option>,
 				)}
 			</select>
 		</label>

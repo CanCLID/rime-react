@@ -83,6 +83,7 @@ export default function RimeReact({
 			isLoading,
 			isInitialized,
 			isDeploying,
+			runAsyncTask,
 			subscribe: rimeInstance?.subscribe || (() => () => void 0), // XXX Fix Me
 		}}>
 		{rimeInstance && <RimeInstanceContext.Provider value={rimeInstance}>

@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import useLocalStorageState from "use-local-storage-state";
 
 import { SHOW_COMMMENTS_LABELS, ShowComments, WRITING_MODE_LABELS, WritingMode } from "../consts";
@@ -10,9 +8,9 @@ import useRimePreference from "../hooks/useRimePreference";
 import type { RunAsyncTask } from "../types";
 
 export default function Preferences({ runAsyncTask }: { runAsyncTask: RunAsyncTask }) {
-	// XXX Fix Me
-	const [pageSizeIsDefault, setPageSizeIsDefault] = useState(true);
 	const [pageSize, setPageSize] = useRimePreference("pageSize", runAsyncTask);
+	const pageSizeIsDefault = pageSize < 0;
+	const pageSizeValue = pageSizeIsDefault ? 5 : pageSize;
 
 	const [enableCompletion, setEnableCompletion] = useRimePreference("enableCompletion", runAsyncTask);
 	const [enableCorrection, setEnableCorrection] = useRimePreference("enableCorrection", runAsyncTask);
@@ -32,7 +30,7 @@ export default function Preferences({ runAsyncTask }: { runAsyncTask: RunAsyncTa
 					className="control-element checkbox-element"
 					autoComplete="off"
 					checked={pageSizeIsDefault}
-					onChange={event => setPageSizeIsDefault(event.target.checked)} />
+					onChange={() => setPageSize(pageSizeIsDefault ? 5 : -1)} />
 				<div className="control range">
 					<input
 						type="range"
@@ -40,7 +38,8 @@ export default function Preferences({ runAsyncTask }: { runAsyncTask: RunAsyncTa
 						min="3"
 						max="10"
 						step="1"
-						value={pageSize}
+						value={pageSizeValue}
+						disabled={pageSizeIsDefault}
 						onChange={event => setPageSize(+event.target.value)} />
 					<div className="range-ticks" aria-hidden>
 						<span className="range-tick" data-tick="3"></span>

@@ -1,6 +1,7 @@
 #include <boost/json/src.hpp>
 #include <emscripten.h>
 #include <rime_api.h>
+#include <rime_levers_api.h>
 #include <string>
 
 #define APP_NAME "rime.react"
@@ -16,12 +17,7 @@ RimeCommit commit;
 RimeContext context;
 std::string json_string;
 RimeApi* rime = rime_get_api();
-
-int page_size = -1;
-Bool enable_completion = -1;
-Bool enable_correction = -1;
-Bool enable_sentence = -1;
-Bool enable_learning = -1;
+RimeLeversApi* levers = nullptr;
 
 template <typename T>
 inline const char* to_json(const T& obj) {
@@ -33,6 +29,65 @@ inline const char* to_json(const char* value) {
   json_string =
       boost::json::serialize(boost::json::string(value ? value : ""));
   return json_string.c_str();
+}
+
+RimeLeversApi* get_levers_api() {
+  if (!levers) {
+    RimeModule* module = rime->find_module("levers");
+    if (module && module->get_api) {
+      levers = reinterpret_cast<RimeLeversApi*>(module->get_api());
+    }
+  }
+  return levers;
+}
+
+std::string current_schema_id() {
+  RimeStatus status;
+  RIME_STRUCT_INIT(RimeStatus, status);
+  std::string schema_id;
+  if (rime->get_status(session_id, &status)) {
+    if (status.schema_id) {
+      schema_id = status.schema_id;
+    }
+    rime->free_status(&status);
+  }
+  return schema_id;
+}
+
+bool update_custom_setting(const char* config_id,
+                           const char* key,
+                           int value,
+                           bool is_bool) {
+  if (!config_id || !key) {
+    return false;
+  }
+  RimeLeversApi* levers_api = get_levers_api();
+  if (!levers_api) {
+    return false;
+  }
+  RimeCustomSettings* settings =
+      levers_api->custom_settings_init(config_id, APP_NAME);
+  if (!settings) {
+    return false;
+  }
+  levers_api->load_settings(settings);
+  Bool ok = False;
+  if (value < 0) {
+    RimeConfig config;
+    if (levers_api->settings_get_config(settings, &config)) {
+      std::string patch_key = std::string("patch/") + key;
+      ok = rime->config_clear(&config, patch_key.c_str());
+    }
+  } else if (is_bool) {
+    ok = levers_api->customize_bool(settings, key, value != 0);
+  } else {
+    ok = levers_api->customize_int(settings, key, value);
+  }
+  if (ok) {
+    levers_api->save_settings(settings);
+  }
+  levers_api->custom_settings_destroy(settings);
+  return ok;
 }
 
 void handler(void*,
@@ -53,6 +108,7 @@ void handler(void*,
     rime->free_schema_list(&schema_list);
     EMIT_RIME_EVENT("schema_list", schema_array);
   }
+#ifdef RIME_HAS_SWITCHES_LIST
   if (!strcmp(message_type, "schema")) {
     boost::json::array switches_array;
     RimeSwitchesList switches_list;
@@ -76,6 +132,7 @@ void handler(void*,
     rime->free_switches_list(&switches_list);
     EMIT_RIME_EVENT("switches_list", switches_array);
   }
+#endif
 }
 
 bool start_rime(bool restart) {
@@ -166,18 +223,30 @@ void set_option(const char* option, int value) {
   rime->set_option(session_id, option, value);
 }
 
-void set_preference(const char* option, int value) {
-  if (!strcmp(option, "pageSize")) {
-    page_size = value;
-  } else if (!strcmp(option, "enableCompletion")) {
-    enable_completion = value;
-  } else if (!strcmp(option, "enableCorrection")) {
-    enable_correction = value;
-  } else if (!strcmp(option, "enableSentence")) {
-    enable_sentence = value;
-  } else if (!strcmp(option, "enableLearning")) {
-    enable_learning = value;
+bool set_preference(const char* option, int value) {
+  if (!option) {
+    return false;
   }
+  const char* key = nullptr;
+  bool is_bool = true;
+  if (!strcmp(option, "pageSize")) {
+    key = "menu/page_size";
+    is_bool = false;
+  } else if (!strcmp(option, "enableCompletion")) {
+    key = "translator/enable_completion";
+  } else if (!strcmp(option, "enableCorrection")) {
+    key = "translator/enable_correction";
+  } else if (!strcmp(option, "enableSentence")) {
+    key = "translator/enable_sentence";
+  } else if (!strcmp(option, "enableLearning")) {
+    key = "translator/enable_user_dict";
+  }
+  if (!key) {
+    return false;
+  }
+  std::string schema_id = current_schema_id();
+  const char* config_id = schema_id.empty() ? "default" : schema_id.c_str();
+  return update_custom_setting(config_id, key, value, is_bool);
 }
 
 bool process_key(const char* input) {

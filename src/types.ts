@@ -4,7 +4,7 @@ export interface RimeAPI {
 	init(): boolean;
 	set_schema(schema_id: string): boolean;
 	set_option(option: string, value: number): void;
-	set_preference(option: string, value: number): void;
+	set_preference(option: string, value: number): boolean;
 	process_key(input: string): boolean;
 	select_candidate(index: number): boolean;
 	delete_candidate(index: number): boolean;
@@ -113,6 +113,7 @@ export interface RimeContextState {
 	isLoading: boolean;
 	isInitialized: boolean;
 	isDeploying: boolean;
+	runAsyncTask: RunAsyncTask;
 	// DTS Bundle Generator can’t transform `RimeInstance["subscribe"]`
 	subscribe: typeof import("./rime.ts").subscribe;
 }

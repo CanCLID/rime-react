@@ -1,5 +1,5 @@
 import { createRoot } from "react-dom/client";
-import { RimeReact, useRimeContext } from "rime-react";
+import { Preferences, RimeReact, Toolbar, useRimeContext } from "rime-react";
 
 const NO_AUTO_FILL = {
   autoComplete: "off",
@@ -23,6 +23,22 @@ function Loading() {
         <span id="loading-label">Loading…</span>
       </>
     )
+  );
+}
+
+function Controls() {
+  const { isLoading, isDeploying, runAsyncTask } = useRimeContext();
+  return (
+    <section id="demo-controls">
+      <div className="panel toolbar-panel">
+        <h2>Toolbar</h2>
+        <Toolbar loading={isLoading || isDeploying} runAsyncTask={runAsyncTask} />
+      </div>
+      <div className="panel preferences-panel">
+        <h2>Preferences</h2>
+        <Preferences runAsyncTask={runAsyncTask} />
+      </div>
+    </section>
   );
 }
 
@@ -162,6 +178,7 @@ function Demo() {
           demo: 朙月拼音、倉頡五代、潮語拼音汕頭. Hit <kbd>`</kbd> to reverse
           lookup (反查).
         </p>
+        <Controls />
         <textarea
           className="text-field"
           {...NO_AUTO_FILL}

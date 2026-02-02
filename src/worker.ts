@@ -257,8 +257,9 @@ const actions: Actions = {
 		Module.ccall("set_option", null, ["string", "number"], [option, value]);
 	},
 	async setPreference(option, value) {
-		Module.ccall("set_preference", null, ["string", "number"], [option, value]);
-		return option === "pageSize" || actions.deploy();
+		const success = Module.ccall("set_preference", "boolean", ["string", "number"], [option, value]);
+		if (!success) return false;
+		return actions.deploy();
 	},
 	async processKey(input) {
 		return Module.ccall("process_key", "boolean", ["string"], [input]);

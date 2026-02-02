@@ -9,8 +9,8 @@ import type { Dispatch, SetStateAction } from "react";
 
 export default function useRimePreference(preference: keyof RimePreferences, runAsyncTask: RunAsyncTask): [number, Dispatch<SetStateAction<number>>] {
 	const Rime = useRimeInstance();
-	// XXX preference should be under "rime-react/preferences", defaultValue is wrong
-	const [value, setValue] = useLocalStorageState(preference, { defaultValue: -1 });
+	const storageKey = `rime-react/preferences/${preference}`;
+	const [value, setValue] = useLocalStorageState(storageKey, { defaultValue: -1 });
 
 	useEffect(() =>
 		runAsyncTask(async () => {

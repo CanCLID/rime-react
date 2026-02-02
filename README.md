@@ -10,21 +10,41 @@ RIME React is a [React](https://reactjs.org) Component for the [RIME Input Metho
 
 See the [RIME React Demo repo](https://github.com/CanCLID/rime-react-demo).
 
-## Example (Local Schema Demo)
+### Toolbar And Preferences (Optional)
 
-This repo includes a Vite demo app under `example/` that loads prebuilt schema files
-from `example/public/schema/`. To run it:
+`Toolbar` and `Preferences` are exposed as optional UI helpers. They require
+`runAsyncTask`, which is now available from `useRimeContext()` when rendered
+inside `RimeReact`.
 
-```sh
-npm install
-npm run build
-cd example
-npm install
-npm run start
+```tsx
+import { Preferences, RimeReact, Toolbar, useRimeContext } from "rime-react";
+
+function Controls() {
+  const { isLoading, isDeploying, runAsyncTask } = useRimeContext();
+  return (
+    <>
+      <Toolbar loading={isLoading || isDeploying} runAsyncTask={runAsyncTask} />
+      <Preferences runAsyncTask={runAsyncTask} />
+    </>
+  );
+}
 ```
 
-The demo copies `dist/rime.js` and `dist/rime.wasm` into `example/assets/` during
-the Vite build, while schema files are served from `example/public/schema/`.
+Preferences are persisted via Rime’s `*.custom.yaml` mechanism and trigger a
+deploy when changed. The default page size is represented by `-1` and clears
+the custom override.
+
+### Toolbar State (Local Storage Only)
+
+For now, toolbar option state is initialized from local storage only. This
+keeps the implementation simple and responsive, but it can drift from the
+actual engine state if Rime changes options internally (schema load, switcher
+defaults, hotkeys, etc.).
+
+**TODO:** Consider a future `getOption` API to initialize toolbar state from
+Rime after deploy, and reconcile local storage with engine state.
+
+
 
 ## Development
 
@@ -149,7 +169,25 @@ dictionaries and stored as a Marisa trie for fast lookup). The JSON configs
 (`t2s.json`, `t2hk.json`, etc.) reference these `.ocd2` files by name, so they
 must be present for conversion to work.
 
-### New App: One Schema + OpenCC (Step-by-Step)
+## Example App
+
+### Running Local Schema Demo
+
+This repo includes a Vite demo app under `example/` that loads prebuilt schema files
+from `example/public/schema/`. To run it:
+
+```sh
+npm install
+npm run build
+cd example
+npm install
+npm run start
+```
+
+The demo copies `dist/rime.js` and `dist/rime.wasm` into `example/assets/` during
+the Vite build, while schema files are served from `example/public/schema/`.
+
+### One Schema + OpenCC (Step-by-Step)
 
 Below is a minimal, end-to-end flow for a new app that has one
 `my.schema.yaml` and one `my.dict.yaml`.

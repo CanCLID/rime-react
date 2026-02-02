@@ -9,8 +9,8 @@ import type { DispatchWithoutAction } from "react";
 
 export default function useRimeOption(option: string, defaultValue: boolean, localStorageKey: string, runAsyncTask: RunAsyncTask): [boolean, DispatchWithoutAction] {
 	const Rime = useRimeInstance();
-	// XXX option should be under "rime-react/options", defaultValue is wrong
-	const [value, setValue] = useLocalStorageState(localStorageKey, { defaultValue });
+	const storageKey = `rime-react/options/${localStorageKey}`;
+	const [value, setValue] = useLocalStorageState(storageKey, { defaultValue });
 
 	const setOption = useCallback(() =>
 		runAsyncTask(async () => {
