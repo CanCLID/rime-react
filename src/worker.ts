@@ -1,6 +1,6 @@
 import { openDB } from "idb";
 
-import type { Actions, ListenerArgsMap, Message, RimeInputStatus, RimeAPI, RimeEvent, RimeDeployStatus } from "./types";
+import type { Actions, ListenerArgsMap, Message, RimeInputStatus, RimeAPI, RimeEvent, Schema, SwitchOption, RimeDeployStatus } from "./types";
 import type { DBSchema, IDBPDatabase } from "idb";
 
 type TypeToString<T> = T extends number ? "number"
@@ -23,8 +23,18 @@ declare const Module: {
 		mkdirTree(path: string, mode?: number): void;
 	};
 };
+
 declare const PATH: {
+	/**
+	 * Removes consecutive slashes, `.` segments and `segment/..` from the path.
+	 * Keeps leading and trailing slashes if any.
+	 */
 	normalize(path: string): string;
+
+	/**
+	 * Equivalent to ``PATH.normalize(`${l}/${r}`)``.
+	 */
+	join2(l: string, r: string): string;
 };
 
 interface PredefinedModule {
@@ -50,6 +60,22 @@ globalThis.onRimeEvent = async (type, value) => {
 			}
 			dispatch("inputStatusChanged", value as RimeInputStatus);
 			break;
+		case "schema_list":
+			dispatch("schemaListChanged", value as Schema[]);
+			break;
+		case "schema":
+			dispatch("schemaChanged", ...(value as string).split("/") as [string, string]);
+			break;
+		case "switches_list":
+			dispatch("switchesListChanged", value as SwitchOption[]);
+			break;
+		case "option": {
+			// XXX Fix Me
+			const option = value as string;
+			const disabled = option[0] === "!";
+			dispatch("optionChanged", option.slice(+disabled), !disabled);
+			break;
+		}
 	}
 };
 
@@ -110,6 +136,10 @@ let pendingCacheDB: Promise<IDBPDatabase<Database>> | undefined = openDB("rime-r
 	},
 });
 
+/**
+ * Turns all backslashes into forward slashes and removes `.` segments and `segment/..` from the path.
+ * Keeps consecutive, leading and trailing slashes if any.
+ */
 function normalizeURL(...parts: string[]) {
 	const newSegments = [];
 	for (const segments of parts) {
@@ -146,7 +176,7 @@ const actions: Actions = {
 			const removeResults = await Promise.allSettled(
 				(await cacheDB.getAll(DB_HASH)).flatMap(({ file, hash }) => {
 					if (schemaFiles[file] !== hash) {
-						const filePath = PATH.normalize(`${RIME_SHARED_DIR}/${file}`);
+						const filePath = PATH.join2(RIME_SHARED_DIR, file);
 						if (Module.FS.analyzePath(filePath).exists) {
 							Module.FS.unlink(filePath);
 						}
@@ -168,9 +198,9 @@ const actions: Actions = {
 			Object.entries(schemaFiles).map(async ([file, hash]) => {
 				const fetchPath = normalizeURL(prefix, normalizeURL(file).replace(/^\//, ""));
 				file = file.replace(/[?#].*/, ""); // Remove query and fragment if any
-				file = PATH.normalize(file).replace(/^\/|\/$/g, "");
+				file = PATH.normalize(file.replace(/\\/g, "/")).replace(/^\/|\/$/g, "");
 				const cachedFile = await cacheDB?.get(DB_HASH, file);
-				const savePath = PATH.normalize(`${RIME_SHARED_DIR}/${file}`);
+				const savePath = PATH.join2(RIME_SHARED_DIR, file);
 				let buffer: ArrayBuffer | undefined;
 				if (cachedFile?.hash === hash) {
 					buffer = await cacheDB?.get(DB_CONTENT, file);
@@ -186,6 +216,8 @@ const actions: Actions = {
 						throw new Error(`Failed to download ${fetchPath}`);
 					}
 					buffer = await response.arrayBuffer();
+					// `Uint8Array.prototype.toHex` is still stage 3 at the time of writing,
+					// see https://github.com/tc39/proposal-arraybuffer-base64
 					const actualHash = Array.from(
 						new Uint8Array(await crypto.subtle.digest("SHA-256", buffer)),
 						byte => byte.toString(16).padStart(2, "0"),
@@ -196,6 +228,9 @@ const actions: Actions = {
 					await cacheDB?.put(DB_CONTENT, buffer, file);
 					await cacheDB?.put(DB_HASH, { file, hash }, file);
 				}
+				// `PATH.dirname` may do things wrong if `savePath` contains `..` segments
+				// This works because it is guaranteed that `savePath` does not have a trailing slash
+				// since it’s removed from `file` above
 				Module.FS.mkdirTree(savePath.slice(0, savePath.lastIndexOf("/")));
 				Module.FS.writeFile(savePath, new Uint8Array(buffer));
 				return buffer;
@@ -207,13 +242,24 @@ const actions: Actions = {
 			userDirMounted = true;
 		}
 		await syncUserDirectory("read");
-		const success = initialized = Module.ccall(initialized ? "deploy" : "init", "boolean", [], []);
+		initialized = Module.ccall(initialized ? "deploy" : "init", "boolean", [], []);
 		await syncUserDirectory("write");
 		const failedFetches = fetchResults.filter(result => result.status === "rejected");
 		if (failedFetches.length) {
 			throw new AggregateError(failedFetches.map(result => result.reason as Error), "Failed to completely set schema files");
 		}
-		return success;
+		return initialized;
+	},
+	async setSchema(id) {
+		return Module.ccall("set_schema", "boolean", ["string"], [id]);
+	},
+	async setOption(option, value) {
+		Module.ccall("set_option", null, ["string", "number"], [option, value]);
+	},
+	async setPreference(option, value) {
+		const success = Module.ccall("set_preference", "boolean", ["string", "number"], [option, value]);
+		if (!success) return false;
+		return actions.deploy();
 	},
 	async processKey(input) {
 		return Module.ccall("process_key", "boolean", ["string"], [input]);

@@ -1,6 +1,6 @@
 import { useContext } from "react";
 
-import RimeContext from "../RimeContext";
+import { RimeContext } from "../contexts";
 
 export default function useRimeContext() {
 	const rimeContext = useContext(RimeContext);

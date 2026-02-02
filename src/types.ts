@@ -1,5 +1,10 @@
+import type { ShowComments, WritingMode } from "./consts";
+
 export interface RimeAPI {
 	init(): boolean;
+	set_schema(schema_id: string): boolean;
+	set_option(option: string, value: number): void;
+	set_preference(option: string, value: number): boolean;
 	process_key(input: string): boolean;
 	select_candidate(index: number): boolean;
 	delete_candidate(index: number): boolean;
@@ -11,12 +16,33 @@ export interface RimeAPI {
 export interface Actions {
 	initialize(baseURL: string | URL, pathToRimeJS: string | URL, pathToRimeWASM: string | URL): Promise<void>;
 	setSchemaFiles(prefix: string, schemaFiles: Record<string, string>): Promise<boolean>;
+	setSchema(id: string): Promise<boolean>;
+	setOption(option: string, value: number): Promise<void>;
+	setPreference(option: keyof RimePreferences, value: number): Promise<boolean>;
 	processKey(input: string): Promise<boolean>;
 	selectCandidate(index: number): Promise<boolean>;
 	deleteCandidate(index: number): Promise<boolean>;
 	flipPage(backward: boolean): Promise<boolean>;
 	clearInput(): Promise<void>;
 	deploy(): Promise<boolean>;
+}
+
+export interface Schema {
+	id: string;
+	name: string;
+}
+
+export interface SwitchOption {
+	isRadio: boolean;
+	currentIndex: number;
+	resetIndex: number;
+	switches: Switch[];
+}
+
+export interface Switch {
+	name: string;
+	label: string;
+	abbrev: string;
 }
 
 interface InputBuffer {
@@ -55,11 +81,19 @@ export type RimeDeployStatus = "start" | "success" | "failure";
 export interface RimeEvent {
 	deploy: RimeDeployStatus;
 	input: RimeInputStatus;
+	schema_list: Schema[];
+	schema: `${string}/${string}`;
+	switches_list: SwitchOption[];
+	option: string;
 }
 
 export interface ListenerArgsMap {
 	deployStatusChanged: [status: RimeDeployStatus];
 	inputStatusChanged: [status: RimeInputStatus];
+	schemaListChanged: [newSchemaList: Schema[]];
+	schemaChanged: [id: string, name: string];
+	switchesListChanged: [newSwitchesList: SwitchOption[]];
+	optionChanged: [option: string, value: boolean];
 }
 
 interface NamedMessage<K extends keyof Actions> {
@@ -71,12 +105,15 @@ interface NamedMessage<K extends keyof Actions> {
 
 export type Message = NamedMessage<keyof Actions>;
 
+export type RunAsyncTask = (asyncTask: () => Promise<void>) => void;
+
 export type RimeInstance = typeof import("./rime.ts");
 
 export interface RimeContextState {
 	isLoading: boolean;
 	isInitialized: boolean;
 	isDeploying: boolean;
+	runAsyncTask: RunAsyncTask;
 	// DTS Bundle Generator can’t transform `RimeInstance["subscribe"]`
 	subscribe: typeof import("./rime.ts").subscribe;
 }
@@ -100,3 +137,18 @@ export interface SelectionState {
 	updateCaretCoords(): void;
 	replace(newText: string): void;
 }
+
+export interface RimePreferences {
+	pageSize: number;
+	enableCompletion: boolean;
+	enableCorrection: boolean;
+	enableSentence: boolean;
+	enableLearning: boolean;
+}
+
+export interface InterfacePreferences {
+	writingMode: WritingMode;
+	showComments: ShowComments;
+}
+
+export interface Preferences extends RimePreferences, InterfacePreferences {}
