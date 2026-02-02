@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import useLocalStorageState from "use-local-storage-state";
 import { createPortal } from "react-dom";
 
 import Candidate from "./Candidate";
 import CandidateWrapper from "./CandidateWrapper";
-import { ordinalSuffixes, RIME_KEY_MAP } from "../consts";
+import { ordinalSuffixes, RIME_KEY_MAP, ShowComments, WritingMode } from "../consts";
 import useRimeInstance from "../hooks/useRimeInstance";
 import useSelection from "../hooks/useSelection";
 import { isPrintable } from "../utils";
@@ -24,6 +25,8 @@ export default function CandidatePanel({
 	const Rime = useRimeInstance();
 	const { caretPos, replaceSelection } = useSelection(container, includeElements);
 	const [inputState, setInputState] = useState<InputState | null>(null);
+	const [writingMode] = useLocalStorageState("writingMode", { defaultValue: WritingMode.HorizontalTBLR });
+	const [showComments] = useLocalStorageState("showComments", { defaultValue: ShowComments.Always });
 	const previousAction = useRef("perform action");
 	const previousKey = useRef<string>();
 
@@ -154,7 +157,11 @@ export default function CandidatePanel({
 		}), [Rime, clearInput]);
 
 	return caretPos && inputState && createPortal(
-		<CandidateWrapper caretPos={caretPos} additionalStyles={additionalStyles}>
+		<CandidateWrapper
+			caretPos={caretPos}
+			additionalStyles={additionalStyles}
+			writingMode={writingMode}
+			showComments={showComments}>
 			<div id="input-buffer-row">
 				<div id="input-buffer">
 					{inputState.inputBuffer.before && <span id="input-buffer-before">{inputState.inputBuffer.before}</span>}

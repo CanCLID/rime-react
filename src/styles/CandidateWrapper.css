@@ -159,6 +159,12 @@ button {
     display: table-row;
 }
 
+#candidate-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
 .candidate {
     display: contents;
     cursor: pointer;
@@ -184,6 +190,63 @@ button {
     padding-inline-end: 1rem;
     width: 100%;
     color: var(--base-content-400);
+}
+
+#candidate-panel[data-writing-mode="horizontal-tb-rl"],
+#candidate-panel[data-writing-mode="horizontal-rl"],
+#candidate-panel[data-writing-mode="vertical-rl"] {
+    direction: rtl;
+}
+
+#candidate-panel[data-writing-mode="vertical-lr"] #input-buffer,
+#candidate-panel[data-writing-mode="vertical-lr"] #candidate-list {
+    writing-mode: vertical-lr;
+    text-orientation: mixed;
+}
+
+#candidate-panel[data-writing-mode="vertical-rl"] #input-buffer,
+#candidate-panel[data-writing-mode="vertical-rl"] #candidate-list {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+}
+
+#candidate-panel[data-writing-mode="horizontal-lr"] #candidate-list,
+#candidate-panel[data-writing-mode="horizontal-rl"] #candidate-list,
+#candidate-panel[data-writing-mode="vertical-lr"] #candidate-list,
+#candidate-panel[data-writing-mode="vertical-rl"] #candidate-list {
+    display: flex;
+    flex-direction: row;
+    gap: 0.25rem;
+}
+
+#candidate-panel[data-writing-mode="horizontal-lr"] #candidate-list li,
+#candidate-panel[data-writing-mode="horizontal-rl"] #candidate-list li,
+#candidate-panel[data-writing-mode="vertical-lr"] #candidate-list li,
+#candidate-panel[data-writing-mode="vertical-rl"] #candidate-list li {
+    display: block;
+}
+
+#candidate-panel[data-writing-mode="horizontal-lr"] .candidate,
+#candidate-panel[data-writing-mode="horizontal-rl"] .candidate,
+#candidate-panel[data-writing-mode="vertical-lr"] .candidate,
+#candidate-panel[data-writing-mode="vertical-rl"] .candidate {
+    display: inline-flex;
+    align-items: baseline;
+}
+
+#candidate-panel[data-writing-mode="horizontal-lr"] .candidate-cell,
+#candidate-panel[data-writing-mode="horizontal-rl"] .candidate-cell,
+#candidate-panel[data-writing-mode="vertical-lr"] .candidate-cell,
+#candidate-panel[data-writing-mode="vertical-rl"] .candidate-cell {
+    display: block;
+}
+
+#candidate-panel[data-writing-mode="horizontal-lr"] .candidate-comment,
+#candidate-panel[data-writing-mode="horizontal-rl"] .candidate-comment,
+#candidate-panel[data-writing-mode="vertical-lr"] .candidate-comment,
+#candidate-panel[data-writing-mode="vertical-rl"] .candidate-comment {
+    width: auto;
+    padding-inline-end: 0;
 }
 
 #candidate-list:not(:hover):not(:focus) .highlighted .candidate-cell,

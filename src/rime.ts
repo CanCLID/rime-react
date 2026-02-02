@@ -27,7 +27,7 @@ type Listeners = {
 let running: Message | null = null;
 const queue: Message[] = [];
 
-const listeners = {} as { [K in keyof Listeners]?: Set<Listeners[K]> };
+const listeners: Partial<Record<keyof ListenerArgsMap, Set<(...args: unknown[]) => void>>> = {};
 
 let enableLogging = false;
 try {
@@ -57,7 +57,6 @@ export async function initialize(pathToRimeJS: string | URL, pathToRimeWASM: str
 			const set = listeners[name];
 			if (set) {
 				for (const listener of set) {
-					// @ts-expect-error Unactionable
 					listener(...args);
 				}
 			}
@@ -124,9 +123,13 @@ export const {
 } = actions;
 
 export function subscribe<K extends keyof Listeners>(type: K, callback: Listeners[K]) {
-	const set = (listeners[type] ||= new Set()) as Set<Listeners[K]>;
-	set.add(callback);
+	let set = listeners[type];
+	if (!set) {
+		set = new Set();
+		listeners[type] = set;
+	}
+	set.add(callback as (...args: unknown[]) => void);
 	return () => {
-		set.delete(callback);
+		set?.delete(callback as (...args: unknown[]) => void);
 	};
 }

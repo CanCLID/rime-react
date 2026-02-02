@@ -3,6 +3,7 @@
 #include <rime_api.h>
 #include <rime_levers_api.h>
 #include <string>
+#include <vector>
 
 #define APP_NAME "rime.react"
 #define EMIT_RIME_EVENT(type, value)                                          \
@@ -52,6 +53,138 @@ std::string current_schema_id() {
     rime->free_status(&status);
   }
   return schema_id;
+}
+
+size_t first_utf8_char_length(const std::string& value) {
+  if (value.empty()) {
+    return 0;
+  }
+  unsigned char lead = static_cast<unsigned char>(value[0]);
+  if (lead < 0x80) return 1;
+  if ((lead & 0xE0) == 0xC0) return 2;
+  if ((lead & 0xF0) == 0xE0) return 3;
+  if ((lead & 0xF8) == 0xF0) return 4;
+  return 1;
+}
+
+std::string abbreviate_label(const std::string& label) {
+  size_t len = first_utf8_char_length(label);
+  return len ? label.substr(0, len) : std::string();
+}
+
+std::string config_get_string_value(RimeConfig* config,
+                                    const std::string& path) {
+  const char* value = rime->config_get_cstring(config, path.c_str());
+  return value ? std::string(value) : std::string();
+}
+
+void config_get_string_list(RimeConfig* config,
+                            const std::string& path,
+                            std::vector<std::string>& out) {
+  RimeConfigIterator iterator;
+  if (!rime->config_begin_list(&iterator, config, path.c_str())) {
+    return;
+  }
+  while (rime->config_next(&iterator)) {
+    if (iterator.path) {
+      std::string value = config_get_string_value(config, iterator.path);
+      if (!value.empty()) {
+        out.push_back(value);
+      }
+    }
+  }
+  rime->config_end(&iterator);
+}
+
+void emit_switches_list(const std::string& schema_id) {
+  if (schema_id.empty()) {
+    return;
+  }
+  RimeConfig config;
+  if (!rime->schema_open(schema_id.c_str(), &config)) {
+    return;
+  }
+  boost::json::array switches_array;
+  RimeConfigIterator iterator;
+  if (rime->config_begin_list(&iterator, &config, "switches")) {
+    while (rime->config_next(&iterator)) {
+      if (!iterator.path) {
+        continue;
+      }
+      std::string base_path = iterator.path;
+      std::string name = config_get_string_value(&config, base_path + "/name");
+      std::vector<std::string> options;
+      config_get_string_list(&config, base_path + "/options", options);
+      if (name.empty() && options.empty()) {
+        continue;
+      }
+      std::vector<std::string> states;
+      std::vector<std::string> abbrev;
+      config_get_string_list(&config, base_path + "/states", states);
+      config_get_string_list(&config, base_path + "/abbrev", abbrev);
+      int reset_value = -1;
+      rime->config_get_int(&config, (base_path + "/reset").c_str(),
+                           &reset_value);
+
+      bool is_radio = !options.empty() && name.empty();
+      boost::json::array switch_entries;
+      int current_index = 0;
+
+      if (is_radio) {
+        for (size_t i = 0; i < options.size(); ++i) {
+          std::string label =
+              i < states.size() ? states[i] : options[i];
+          std::string short_label =
+              i < abbrev.size() ? abbrev[i] : abbreviate_label(label);
+          boost::json::object entry;
+          entry["name"] = options[i];
+          entry["label"] = label;
+          entry["abbrev"] = short_label;
+          switch_entries.push_back(entry);
+        }
+        int selected_index = -1;
+        for (size_t i = 0; i < options.size(); ++i) {
+          if (rime->get_option(session_id, options[i].c_str())) {
+            selected_index = static_cast<int>(i);
+            break;
+          }
+        }
+        if (selected_index >= 0) {
+          current_index = selected_index;
+        } else if (reset_value >= 0 &&
+                   reset_value < static_cast<int>(options.size())) {
+          current_index = reset_value;
+        }
+      } else {
+        if (states.size() < 2) {
+          states.clear();
+          states.push_back("Off");
+          states.push_back("On");
+        }
+        for (size_t i = 0; i < states.size(); ++i) {
+          std::string label = states[i];
+          std::string short_label =
+              i < abbrev.size() ? abbrev[i] : abbreviate_label(label);
+          boost::json::object entry;
+          entry["name"] = name;
+          entry["label"] = label;
+          entry["abbrev"] = short_label;
+          switch_entries.push_back(entry);
+        }
+        current_index = rime->get_option(session_id, name.c_str()) ? 1 : 0;
+      }
+
+      boost::json::object switch_option;
+      switch_option["isRadio"] = is_radio;
+      switch_option["currentIndex"] = current_index;
+      switch_option["resetIndex"] = reset_value;
+      switch_option["switches"] = switch_entries;
+      switches_array.push_back(switch_option);
+    }
+    rime->config_end(&iterator);
+  }
+  rime->config_close(&config);
+  EMIT_RIME_EVENT("switches_list", switches_array);
 }
 
 bool update_custom_setting(const char* config_id,
@@ -108,31 +241,10 @@ void handler(void*,
     rime->free_schema_list(&schema_list);
     EMIT_RIME_EVENT("schema_list", schema_array);
   }
-#ifdef RIME_HAS_SWITCHES_LIST
   if (!strcmp(message_type, "schema")) {
-    boost::json::array switches_array;
-    RimeSwitchesList switches_list;
-    rime->get_switches_list(session_id, &switches_list);
-    for (size_t i = 0; i < switches_list.size; ++i) {
-      boost::json::object switch_option;
-      switch_option["isRadio"] = (bool)switches_list.list[i].is_radio;
-      switch_option["currentIndex"] = switches_list.list[i].current_index;
-      switch_option["resetIndex"] = switches_list.list[i].reset_index;
-      boost::json::array switch_array;
-      for (size_t j = 0; j < switches_list.list[i].size; ++j) {
-        boost::json::object switch_item;
-        switch_item["name"] = switches_list.list[i].switches[j].name;
-        switch_item["label"] = switches_list.list[i].switches[j].label;
-        switch_item["abbrev"] = switches_list.list[i].switches[j].abbrev;
-        switch_array.push_back(switch_item);
-      }
-      switch_option["switches"] = switch_array;
-      switches_array.push_back(switch_option);
-    }
-    rime->free_switches_list(&switches_list);
-    EMIT_RIME_EVENT("switches_list", switches_array);
+    std::string schema_id = current_schema_id();
+    emit_switches_list(schema_id);
   }
-#endif
 }
 
 bool start_rime(bool restart) {

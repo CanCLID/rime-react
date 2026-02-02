@@ -3,13 +3,22 @@ import { useRef } from "react";
 import ReactShadowRoot from "react-shadow-root";
 
 import type { CaretPos } from "../types";
+import type { ShowComments, WritingMode } from "../consts";
 import type { CSSProperties, ReactNode } from "react";
 
 declare const candidateWrapperStylesSource: string;
 
-export default function CandidateWrapper({ caretPos, additionalStyles, children }: {
+export default function CandidateWrapper({
+	caretPos,
+	additionalStyles,
+	writingMode,
+	showComments,
+	children,
+}: {
 	caretPos: CaretPos;
 	additionalStyles?: string;
+	writingMode: WritingMode;
+	showComments: ShowComments;
 	children: ReactNode;
 }) {
 	const panelRef = useRef<HTMLDivElement>(null);
@@ -29,7 +38,7 @@ export default function CandidateWrapper({ caretPos, additionalStyles, children 
 		<ReactShadowRoot>
 			<style>{candidateWrapperStylesSource}</style>
 			{additionalStyles && <style>{additionalStyles}</style>}
-			<div id="candidate-panel">{children}</div>
+			<div id="candidate-panel" data-writing-mode={writingMode} data-show-comments={showComments}>{children}</div>
 		</ReactShadowRoot>
 	</div>;
 }
