@@ -103,11 +103,15 @@ const targetHandlers: Record<string, () => Promise<void>> = {
 		console.log("Building opencc");
 		await patch("opencc.patch", "librime/deps/opencc");
 		await fs.rm(join("librime/deps/opencc", dst), { recursive: true, force: true });
+		const openccFlags = PLATFORM === "win32"
+			? ["-DCMAKE_CXX_FLAGS:STRING=-D_CRT_SECURE_NO_WARNINGS -Wno-deprecated-declarations"]
+			: [];
 		await run(
 			"cmake",
 			[
 				".",
 				...cmakeDef,
+				...openccFlags,
 				`-DCMAKE_FIND_ROOT_PATH:PATH=${root}/librime`,
 				"-DENABLE_DARTS:BOOL=OFF",
 				"-DUSE_SYSTEM_MARISA:BOOL=ON",
