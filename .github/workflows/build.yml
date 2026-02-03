@@ -58,9 +58,11 @@ jobs:
               run: |
                   npm run native
             - name: Build Library
+              if: ${{ matrix.os != 'windows-latest' }}
               run: |
                   npm run lib
             - name: Build WebAssembly
+              if: ${{ matrix.os != 'windows-latest' }}
               run: |
                   npm run wasm
             - name: Build App
