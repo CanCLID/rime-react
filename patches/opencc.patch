@@ -1,8 +1,6 @@
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 1acb75a..3faa727 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -152,12 +152,22 @@ add_definitions(
+@@ -152,21 +152,33 @@
    -DPACKAGE_NAME="${PACKAGE_NAME}"
  )
  
@@ -16,7 +14,8 @@ index 1acb75a..3faa727 100644
 +
  if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
    add_definitions(
-     -std=c++17
+-    -std=c++14
++    -std=c++17
      -Wall
    )
 -  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
@@ -26,7 +25,20 @@ index 1acb75a..3faa727 100644
    if (CMAKE_BUILD_TYPE MATCHES Debug)
      add_definitions(-O0 -g3)
    endif ()
-@@ -221,9 +231,6 @@ endif()
+ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+   add_definitions(
+-    -std=c++14
++    -std=c++17
+     -Wall
+   )
+-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
++  if (NOT EMSCRIPTEN)
++    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
++  endif ()
+   if (CMAKE_BUILD_TYPE MATCHES Debug)
+     add_definitions(-O0 -g3)
+   endif ()
+@@ -221,9 +233,6 @@
  ######## Subdirectories
  
  add_subdirectory(src)
@@ -36,15 +48,13 @@ index 1acb75a..3faa727 100644
  
  ######## Testing
  
-diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 75eda02..759fa85 100644
+
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -202,7 +202,3 @@ endif()
- if (ENABLE_BENCHMARK)
+@@ -203,6 +203,3 @@
    add_subdirectory(benchmark)
  endif()
--
+ 
 -# Subdir
 -
 -add_subdirectory(tools)
