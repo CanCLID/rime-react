@@ -8,7 +8,7 @@ const NO_AUTO_FILL = {
   spellCheck: "false",
 } as const;
 
-const assetsPrefix = `${import.meta.env.BASE_URL}assets/`;
+const assetsPrefix = process.env.NODE_ENV === "production" ? "" : "/assets/";
 // Schema files live in example/public/schema. Update hashes when those files change.
 const schemaFilesFetchPrefix = new URL(
   "schema/",
