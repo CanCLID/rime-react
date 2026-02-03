@@ -1,8 +1,8 @@
-FROM emscripten/emsdk as emsdk
-FROM node:bookworm as builder
+FROM emscripten/emsdk AS emsdk
+FROM node:22-bookworm AS builder
 
 ARG ENABLE_LOGGING=ON
-ENV ENABLE_LOGGING ${ENABLE_LOGGING}
+ENV ENABLE_LOGGING=$ENABLE_LOGGING
 
 RUN apt update
 RUN apt upgrade -y
@@ -17,7 +17,7 @@ RUN apt install -y \
 	libopencc-dev
 
 COPY --from=emsdk /emsdk /emsdk
-ENV PATH ${PATH}:/emsdk/upstream/emscripten
+ENV PATH="$PATH:/emsdk/upstream/emscripten"
 
 COPY / /rime-react
 WORKDIR /rime-react
