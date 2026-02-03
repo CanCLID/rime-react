@@ -59,8 +59,9 @@ indexOutput = indexOutput.replace(
 await fs.mkdir("dist", { recursive: true });
 await fs.writeFile("dist/index.js", indexOutput);
 
-await run("npx", [
-	"--yes",
+await run("npm", [
+	"exec",
+	"--",
 	"dts-bundle-generator",
 	"--no-check",
 	"-o",
