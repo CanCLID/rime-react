@@ -17,16 +17,6 @@ const cmakeDefCommon = [
 	"-DCMAKE_BUILD_TYPE:STRING=Release",
 	"-DCMAKE_POLICY_VERSION_MINIMUM=3.5",
 ];
-if (PLATFORM === "win32") {
-	cmakeDefCommon.push(
-		"-DCMAKE_C_COMPILER=clang",
-		"-DCMAKE_CXX_COMPILER=clang++",
-		`-DCMAKE_USER_MAKE_RULES_OVERRIDE:PATH=${root}/librime/cmake/c_flag_overrides.cmake`,
-		`-DCMAKE_USER_MAKE_RULES_OVERRIDE_CXX:PATH=${root}/librime/cmake/cxx_flag_overrides.cmake`,
-		"-DCMAKE_EXE_LINKER_FLAGS_INIT:STRING=-llibcmt",
-		"-DCMAKE_MSVC_RUNTIME_LIBRARY:STRING=MultiThreaded",
-	);
-}
 
 const cmakeDef = [
 	...cmakeDefCommon,
@@ -103,15 +93,11 @@ const targetHandlers: Record<string, () => Promise<void>> = {
 		console.log("Building opencc");
 		await patch("opencc.patch", "librime/deps/opencc");
 		await fs.rm(join("librime/deps/opencc", dst), { recursive: true, force: true });
-		const openccFlags = PLATFORM === "win32"
-			? ["-DCMAKE_CXX_FLAGS:STRING=-D_CRT_SECURE_NO_WARNINGS -Wno-deprecated-declarations"]
-			: [];
 		await run(
 			"cmake",
 			[
 				".",
 				...cmakeDef,
-				...openccFlags,
 				`-DCMAKE_FIND_ROOT_PATH:PATH=${root}/librime`,
 				"-DENABLE_DARTS:BOOL=OFF",
 				"-DUSE_SYSTEM_MARISA:BOOL=ON",
